@@ -19,7 +19,7 @@ if sys.platform == "darwin":
     identity = subprocess.run(["codesign", "--display", "--verbose=4", str(binary)], capture_output=True, text=True, check=True)
     if f"TeamIdentifier={team}" not in identity.stderr.splitlines():
         sys.exit("The release binary has the wrong Apple publisher.")
-    subprocess.run(["spctl", "--assess", "--type", "execute", "--verbose=4", str(binary)], check=True)
+    subprocess.run(["codesign", "--verify", "--strict", "-R=notarized", "--check-notarization", str(binary)], check=True)
 
 with tempfile.TemporaryDirectory(prefix="Lettermint café ") as directory:
     target = Path(directory) / "bin/lettermint"

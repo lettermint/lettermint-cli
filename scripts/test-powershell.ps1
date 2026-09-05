@@ -26,7 +26,7 @@ try {
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $path 'lettermint-cli/SKILL.md'))) { throw 'Skill export failed.' }
     $completion = & $binary completion powershell
     if ($LASTEXITCODE -ne 0 -or -not $completion) { throw 'Completion failed.' }
-    foreach ($script in @('scripts/install.ps1','scripts/uninstall.ps1','scripts/sign-windows.ps1')) {
+    foreach ($script in @('scripts/install.ps1','scripts/uninstall.ps1','scripts/sign-windows.ps1','scripts/verify-windows-release.ps1')) {
         $tokens = $null; $parseErrors = $null
         [Management.Automation.Language.Parser]::ParseFile((Join-Path (Get-Location) $script), [ref]$tokens, [ref]$parseErrors) | Out-Null
         if ($parseErrors.Count -gt 0) { throw ($parseErrors | Out-String) }
