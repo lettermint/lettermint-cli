@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "The release check names a signing variable; it contains no key."
+condition = "AND"
+paths = ['''^scripts/release\.py$''']
+regexTarget = "secret"
+regexes = ['''^MACOS_SIGN_P12$''']

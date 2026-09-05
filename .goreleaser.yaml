@@ -1,0 +1,84 @@
+version: 2
+project_name: lettermint
+builds:
+  - id: macos
+    main: ./cmd/lettermint
+    binary: lettermint
+    env: [CGO_ENABLED=0]
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.clientID={{ if not .IsSnapshot }}{{.Env.CLI_OAUTH_CLIENT_ID}}{{ end }}
+  - id: linux
+    main: ./cmd/lettermint
+    binary: lettermint
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.clientID={{ if not .IsSnapshot }}{{.Env.CLI_OAUTH_CLIENT_ID}}{{ end }}
+  - id: windows
+    main: ./cmd/lettermint
+    binary: lettermint
+    env: [CGO_ENABLED=0]
+    goos: [windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.clientID={{ if not .IsSnapshot }}{{.Env.CLI_OAUTH_CLIENT_ID}}{{ end }}
+    hooks:
+      post:
+        - cmd: '{{ if .IsSnapshot }}go version{{ else }}pwsh -NoProfile -File scripts/sign-windows.ps1 -Path "{{ .Path }}"{{ end }}'
+notarize:
+  macos:
+    - enabled: '{{ if .IsSnapshot }}false{{ else }}true{{ end }}'
+      ids: [macos]
+      sign:
+        certificate: '{{.Env.MACOS_SIGN_P12}}'
+        password: '{{.Env.MACOS_SIGN_PASSWORD}}'
+      notarize:
+        wait: true
+        timeout: 20m
+        issuer_id: '{{.Env.MACOS_NOTARY_ISSUER_ID}}'
+        key_id: '{{.Env.MACOS_NOTARY_KEY_ID}}'
+        key: '{{.Env.MACOS_NOTARY_KEY}}'
+archives:
+  - id: macos
+    ids: [macos]
+    formats: [tar.gz]
+    name_template: '{{.ProjectName}}_{{.Version}}_{{.Os}}_{{.Arch}}'
+    files: [LICENSE, README.md, CHANGELOG.md, skills/lettermint-cli/**]
+  - id: packages
+    ids: [linux, windows]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: '{{.ProjectName}}_{{.Version}}_{{.Os}}_{{.Arch}}'
+    files: [LICENSE, README.md, CHANGELOG.md, skills/lettermint-cli/**]
+checksum:
+  name_template: checksums.txt
+release:
+  github:
+    owner: lettermint
+    name: lettermint-cli
+  # The workflow attaches verified files to an existing published release.
+  # Keep GoReleaser publishing disabled, including for a local invocation.
+  disable: true
+homebrew_casks:
+  - name: lettermint
+    ids: [macos]
+    url:
+      template: 'https://github.com/lettermint/lettermint-cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}'
+    binaries: [lettermint]
+    homepage: https://lettermint.co/
+    description: Send email and test Lettermint webhooks locally
+    skip_upload: true
+    repository:
+      owner: lettermint
+      name: homebrew-tap
+changelog:
+  use: git
+  sort: asc

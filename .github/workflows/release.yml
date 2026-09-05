@@ -1,0 +1,266 @@
+name: Release
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.id }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Check the release and its exact commit on main
+        run: python scripts/release.py gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+  test:
+    needs: gate
+    uses: ./.github/workflows/test.yml
+
+  package:
+    needs: test
+    runs-on: windows-2025
+    environment: release
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Restore the original packages on a retry
+        id: saved
+        run: python scripts/release.py restore --kind packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check signing settings and sign the installers
+        if: steps.saved.outputs.restored != 'true'
+        shell: pwsh
+        env:
+          CLI_OAUTH_CLIENT_ID: ${{ vars.CLI_OAUTH_CLIENT_ID }}
+          WINDOWS_SIGN_P12: ${{ secrets.WINDOWS_SIGN_P12 }}
+          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+          MACOS_SIGN_TEAM_ID: ${{ vars.MACOS_SIGN_TEAM_ID }}
+          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
+        run: |
+          python scripts/release.py settings
+          if ($LASTEXITCODE -ne 0) { throw 'Release settings are incomplete.' }
+          New-Item -ItemType Directory packaging | Out-Null
+          Copy-Item scripts/install.ps1, scripts/uninstall.ps1 packaging/
+          Get-ChildItem packaging/*.ps1 | ForEach-Object { ./scripts/sign-windows.ps1 -Path $_.FullName }
+      - name: Build, sign, notarize, and package without publishing
+        if: steps.saved.outputs.restored != 'true'
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          version: v2.13.2
+          args: release --clean --skip=publish
+        env:
+          CLI_OAUTH_CLIENT_ID: ${{ vars.CLI_OAUTH_CLIENT_ID }}
+          WINDOWS_SIGN_P12: ${{ secrets.WINDOWS_SIGN_P12 }}
+          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+          MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+      - name: Select release files and calculate their final checksums
+        if: steps.saved.outputs.restored != 'true'
+        run: python scripts/release.py stage
+      - name: Extract all packages for the secret scan
+        run: python scripts/release.py scan --target smoke
+      - name: Scan final package contents
+        run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 dir --redact --no-banner --max-target-megabytes 150 --config .gitleaks.toml smoke
+      - name: Save the original package bytes
+        if: steps.saved.outputs.restored != 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ github.event.release.id }}-packages
+          path: release-bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+  verify:
+    needs: package
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, system: linux, arch: amd64}
+          - {runner: ubuntu-24.04-arm, system: linux, arch: arm64}
+          - {runner: macos-15-intel, system: darwin, arch: amd64}
+          - {runner: macos-15, system: darwin, arch: arm64}
+          - {runner: windows-2025, system: windows, arch: amd64}
+          - {runner: windows-11-arm, system: windows, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.event.release.id }}-packages
+          path: release-bundle/
+      - name: Verify checksums and extract the native package
+        run: python scripts/release.py unpack --system ${{ matrix.system }} --arch ${{ matrix.arch }}
+      - name: Check native signatures, notarization, version, and manual installation
+        if: runner.os != 'Windows'
+        run: python scripts/verify-unix-release.py
+        env:
+          MACOS_SIGN_TEAM_ID: ${{ vars.MACOS_SIGN_TEAM_ID }}
+      - name: Check signed installation with PowerShell 7
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/verify-windows-release.ps1
+        env:
+          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
+      - name: Check signed installation with PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./scripts/verify-windows-release.ps1
+        env:
+          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
+
+  attest:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Restore verified files and provenance on a retry
+        id: saved
+        run: python scripts/release.py restore --kind verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: steps.saved.outputs.restored != 'true'
+        with:
+          name: release-${{ github.event.release.id }}-packages
+          path: release-bundle/
+      - run: python scripts/release.py verify
+        if: steps.saved.outputs.restored != 'true'
+      - name: Attest the verified final files
+        if: steps.saved.outputs.restored != 'true'
+        id: provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: release-bundle/assets/*
+      - name: Save the provenance with the verified packages
+        if: steps.saved.outputs.restored != 'true'
+        env:
+          BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
+        run: |
+          cp "$BUNDLE_PATH" release-bundle/assets/provenance.jsonl
+          python scripts/release.py seal
+      - name: Verify provenance for every release file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for file in release-bundle/assets/*; do
+            if [ "$(basename "$file")" != provenance.jsonl ]; then
+              gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --bundle release-bundle/assets/provenance.jsonl --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA"
+            fi
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.saved.outputs.restored != 'true'
+        with:
+          name: release-${{ github.event.release.id }}-verified
+          path: release-bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    needs: attest
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.event.release.id }}-verified
+          path: release-bundle/
+      - name: Attach only verified files without replacing assets or release notes
+        run: python scripts/release.py upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  homebrew:
+    needs: publish
+    if: '!github.event.release.prerelease'
+    runs-on: macos-15
+    environment: release
+    concurrency:
+      group: homebrew-cask
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.event.release.id }}-verified
+          path: release-bundle/
+      - name: Only update the tap for the newest stable release
+        id: latest
+        run: python scripts/release.py tap-gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check the cask and open a pull request
+        if: steps.latest.outputs.eligible == 'true'
+        run: python scripts/homebrew-pr.py
+        env:
+          # Fine-grained token: only homebrew-tap, Contents and Pull requests write.
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

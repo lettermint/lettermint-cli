@@ -1,0 +1,28 @@
+  ▗▄▄▖                           
+  ████                           
+  ████       Lettermint CLI 1.0.0
+  ████████                       
+  ▝██████▘                       
+
+Lettermint CLI 1.0.0
+
+2026-09-05 14:32:08 UTC  200 OK        42 ms  suppression.added  seq=12 attempt=1 delivery=delivery_01
+2026-09-05 14:32:08 UTC  500 FAILED    18 ms  suppression.added  seq=13 attempt=1 delivery=delivery_01  error=local_http_500 (Internal Server Error)
+2026-09-05 14:32:08 UTC  FAILED      30000 ms  suppression.added  seq=14 attempt=1 delivery=delivery_01  error=callback timeout\ntry again\u001b[2J
+
+STDERR
+Listener active
+Session: session_01
+Profile: work
+Project: proj_01
+Route: —
+Forward to: http://localhost:3000/hook
+Events: all message and suppression events
+Machine events: no
+
+Use listeners secret session_01 to configure signature verification.
+Replay an attempt: lettermint listeners replay session_01 --sequence SEQUENCE --profile work
+Press Ctrl+C to stop this listener.
+
+Connection lost. Reconnecting automatically.
+Connection restored. Listening for events.

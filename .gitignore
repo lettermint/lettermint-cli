@@ -1,0 +1,22 @@
+dist/
+/lettermint
+/lettermint.exe
+*.test
+
+/packaging/
+.idea/
+.DS_Store
+
+# Local settings and signing material must not enter a commit.
+.env
+.env.*
+.envrc
+!.env.example
+*.p12
+*.pfx
+*.p8
+*.key
+*.pem
+/release-bundle/
+/smoke/
+__pycache__/

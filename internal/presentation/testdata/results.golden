@@ -1,0 +1,274 @@
+>>> projects list
+Projects
+
+Name         ID       Created                
+Café orders  proj_01  2026-09-01 10:00:00 UTC
+
+1 result shown.
+
+More results are available. Repeat this command with the same context and:
+--cursor opaque-cursor
+
+>>> routes list
+Routes
+
+Name      Slug      Type           Default  ID      
+Receipts  receipts  transactional  yes      route_01
+
+1 result shown.
+
+>>> domains list
+Domains
+
+Domain       Status    ID       
+example.com  verified  domain_01
+
+1 result shown.
+
+>>> webhooks list
+Webhooks
+
+Name        Enabled  URL                       ID     
+Local test  no       https://example.com/hook  hook_01
+
+1 result shown.
+
+>>> messages list
+Messages
+
+Created                  Type      Status     Recipient         Subject     ID    
+2026-09-05 12:00:00 UTC  outbound  delivered  café@example.net  Order 1042  msg_01
+
+1 result shown.
+
+>>> messages events
+Message events
+
+Time                     Event            
+2026-09-05 12:00:00 UTC  message.delivered
+
+1 result shown.
+
+>>> listeners list
+Listeners
+
+ID          Project  State   Expiry                 
+session_01  proj_01  active  2026-09-06 00:00:00 UTC
+
+1 result shown.
+
+>>> profiles list
+Profiles
+
+Selected  Name  Team     Project  Route
+no        test  team_02  —        —    
+yes       work  team_01  proj_01  —    
+
+2 results shown.
+
+>>> skills list
+Skills
+
+Name            Version
+lettermint-cli  1.0.0  
+
+1 result shown.
+
+>>> projects get
+Project
+
+Name: Orders
+ID: proj_01
+Routes:
+  —
+Settings:
+  Tracking: yes
+SMTP enabled: no
+
+>>> routes get
+Route
+
+Name: Receipts
+ID: route_01
+Inbound settings:
+  Enabled: —
+Settings:
+  Click tracking: no
+
+>>> domains get
+Domain
+
+ID: domain_01
+DNS records:
+  1.
+    Type: TXT
+    Value: verification-value
+Domain: example.com
+Status: pending
+
+>>> webhooks get
+Webhook
+
+Name: Local test
+ID: hook_01
+Events:
+  - message.delivered
+
+>>> messages get
+Message
+
+ID: msg_01
+Status: delivered
+Subject: Full subject with Unicode: 你好 👩‍💻
+To:
+  1.
+    Email: café@example.net
+
+>>> listeners get
+Listener
+
+ID: session_01
+Attempts:
+  1.
+    Local status: 500
+    Sequence: 12
+Expires at: 2026-09-05 00:00:00 UTC
+Project ID: proj_01
+State: expired
+
+>>> auth status
+Login status
+
+Identity:
+  Team:
+    Name: Demo
+    ID: team_01
+  User:
+    ID: user_01
+    Email: user@example.com
+Profile: work
+
+>>> auth login
+Login complete
+
+Identity:
+  Team:
+    Name: Demo
+  User:
+    Email: user@example.com
+Profile: work
+
+>>> auth logout
+Saved login removed
+
+Local credentials removed: yes
+Revoked: no
+
+Server access can remain active. Revoke it in Applications if needed.
+
+>>> context show
+Current context
+
+Context:
+  Project: proj_01
+  Route: —
+Profile: work
+
+>>> context set
+Context saved
+
+Project: proj_01
+Route: route_01
+
+>>> profiles use
+Profile selected
+
+Profile: work
+
+>>> doctor
+Connection check
+
+API: available
+Identity:
+  Team:
+    Name: Demo
+Version: 1.0.0
+
+>>> messages send
+Message accepted
+
+Message ID: msg_01
+Idempotent replay: no
+Status: accepted
+
+Accepted for processing. Delivery is not yet confirmed.
+Check delivery with: lettermint messages events msg_01
+
+>>> projects create
+Project created
+
+Name: Orders
+ID: proj_01
+
+>>> routes update
+Route updated
+
+Name: Receipts
+ID: route_01
+
+>>> domains verify
+Verification result
+
+Status: pending
+Verified: no
+
+>>> domains assign
+Domain projects updated
+
+Project IDs:
+  - proj_01
+
+>>> webhooks test
+Webhook test result
+
+Success: yes
+
+>>> webhooks delete
+Webhook deleted
+
+Deleted: yes
+
+>>> listeners stop
+Listener stopped
+
+Stopped: yes
+
+>>> listeners replay
+Replay queued
+
+Attempt: 2
+Delivery ID: delivery_01
+Event: suppression.added
+Sequence: 13
+
+>>> listeners secret
+Listener signing secret
+
+Secret: local-signing-secret
+
+>>> skills export
+Skills exported
+
+Output: ./Skills café
+Version: 1.0.0
+
+>>> version
+Lettermint 1.0.0
+
+>>> projects list
+Projects
+
+No results found.
+
+0 results shown.
+
