@@ -4,54 +4,36 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Join our Discord server](https://img.shields.io/discord/1305510095588819035?logo=discord&logoColor=eee&label=Discord&labelColor=464ce5&color=0D0E28&cacheSeconds=43200)](https://lettermint.co/r/discord)
 
-The official command-line tool for [Lettermint](https://lettermint.co).
+The official command-line tool for [Lettermint](https://lettermint.co). Send email, manage projects, and test webhooks from your terminal.
 
-Send email, inspect delivery events, manage your projects, and test webhooks from your terminal. Use readable tables for daily work or JSON output for scripts and AI agents.
+## Install
 
-## Installation
+### Shell (macOS and Linux)
 
-The first public release is in preparation. The commands below apply after the signed release files and Homebrew cask are published. To try the CLI now, see [local development](#local-development).
+```sh
+curl -fsSL https://lettermint.co/cli/install.sh | sh
+```
 
-### macOS
-
-Install with Homebrew:
+### Homebrew (macOS)
 
 ```sh
 brew install --cask lettermint/tap/lettermint
 ```
 
-### Windows
-
-Download the signed installer and select the latest stable release:
+### PowerShell (Windows)
 
 ```powershell
 $version = (Invoke-RestMethod 'https://api.github.com/repos/lettermint/lettermint-cli/releases/latest').tag_name
 $installer = Join-Path $env:TEMP 'lettermint-install.ps1'
 Invoke-WebRequest -UseBasicParsing 'https://lettermint.co/cli/install.ps1' -OutFile $installer
-Get-AuthenticodeSignature $installer
 & $installer -Version $version
 ```
 
-The website redirects to the signed GitHub release file. Check that the signature is valid and identifies the Lettermint publisher before you run the script. Save the file before execution; do not pipe it to `Invoke-Expression`.
+The Windows installer checks its signature from the saved file. Open a new terminal after installation. You can also get `lettermint.exe` inside a Windows ZIP from [GitHub releases](https://github.com/lettermint/lettermint-cli/releases).
 
-The installer installs `lettermint.exe` and adds its directory to your user PATH. PowerShell 5.1 and 7 are supported. Open a new terminal after installation.
+See the [installation guide](docs/installation.md) for exact versions, signature checks, manual downloads, updates, and removal.
 
-### Linux
-
-Download and run the installer for the latest stable release:
-
-```sh
-curl -fsSL https://lettermint.co/cli/install.sh -o install.sh
-sh install.sh
-```
-
-The script also supports macOS. It installs in `$HOME/.local/bin`, checks the release checksum, and checks the Apple signature and notarization on macOS. It prints PATH instructions if needed. Use `--version v1.0.0` to select an exact version. Use Homebrew to update an existing Homebrew installation.
-
-### Manual downloads
-
-Download the archive for your operating system and architecture from [GitHub releases](https://github.com/lettermint/lettermint-cli/releases). Follow the [installation guide](docs/installation.md) to verify and extract it. Release builds target macOS, Linux, and Windows on amd64 and arm64. Windows ZIP archives contain `lettermint.exe`; macOS and Linux archives contain `lettermint`.
-
-The installation guide also covers updates and removal. Login requires a browser and a working operating system credential store.
+The first public release is in preparation. These commands become available after publication. Until then, use [local development](#local-development).
 
 ## Usage
 
