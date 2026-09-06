@@ -26,6 +26,9 @@ jobs:
       - name: Terminal and pipe behavior
         if: runner.os != 'Windows'
         run: python3 scripts/test-terminal.py ./lettermint
+      - name: Shell installer behavior
+        if: runner.os != 'Windows'
+        run: python3 scripts/test_install.py
       - name: PowerShell 7 behavior
         if: runner.os == 'Windows'
         shell: pwsh

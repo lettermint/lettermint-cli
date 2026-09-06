@@ -106,7 +106,7 @@ def archive_name(tag, system, arch):
 
 def asset_names(ctx, provenance=False):
     names = [archive_name(ctx["tag"], *platform) for platform in PLATFORMS]
-    names += ["install.ps1", "uninstall.ps1", "checksums.txt"]
+    names += ["install.sh", "install.ps1", "uninstall.ps1", "checksums.txt"]
     return names + (["provenance.jsonl"] if provenance else [])
 
 
@@ -138,6 +138,17 @@ def verify_bundle(root, ctx, provenance=False):
         raise ValueError("The package checksums are invalid.")
 
 
+def prepare_shell_installer(source, target, team_id):
+    if not re.fullmatch(r"[A-Z0-9]{10}", team_id):
+        raise ValueError("MACOS_SIGN_TEAM_ID must be an Apple team identifier.")
+    template = source.read_text(encoding="utf-8")
+    setting = "EXPECTED_MACOS_TEAM_ID='REPLACE_WITH_APPLE_TEAM_ID'"
+    if template.count(setting) != 1:
+        raise ValueError("The shell installer must contain one Apple team ID setting.")
+    target.write_text(template.replace(setting, f"EXPECTED_MACOS_TEAM_ID='{team_id}'"),
+                      encoding="utf-8", newline="\n")
+
+
 def stage(root, ctx):
     root.mkdir()
     (root / "assets").mkdir()
@@ -147,6 +158,8 @@ def stage(root, ctx):
         shutil.copyfile(Path("dist") / name, root / "assets" / name)
     for name in ("install.ps1", "uninstall.ps1"):
         shutil.copyfile(Path("packaging") / name, root / "assets" / name)
+    prepare_shell_installer(Path("scripts/install.sh"), root / "assets/install.sh",
+                            os.environ.get("MACOS_SIGN_TEAM_ID", ""))
     casks = list(Path("dist").glob("**/lettermint.rb"))
     if len(casks) != 1:
         raise ValueError("Exactly one generated cask is required.")
@@ -245,7 +258,7 @@ def scan_contents(root, ctx, target):
         # Gitleaks skips binary files. Scan their printable strings as text too.
         strings = re.findall(rb"[\x20-\x7e]{8,}", binary.read_bytes())
         (directory / "binary-strings.txt").write_bytes(b"\n".join(strings))
-    for name in ("install.ps1", "uninstall.ps1", "checksums.txt"):
+    for name in ("install.sh", "install.ps1", "uninstall.ps1", "checksums.txt"):
         shutil.copyfile(root / "assets" / name, target / name)
 
 

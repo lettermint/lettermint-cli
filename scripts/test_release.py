@@ -1,3 +1,4 @@
+from contextlib import chdir
 import json
 import os
 from pathlib import Path
@@ -69,6 +70,45 @@ class ReleaseTest(unittest.TestCase):
             release.verify_bundle(self.root, {**self.ctx, "commit": "b" * 40})
         (self.root / "assets/install.ps1").write_text("changed")
         with self.assertRaisesRegex(ValueError, "changed"):
+            release.verify_bundle(self.root, self.ctx)
+
+    def test_shell_installer_requires_a_valid_publisher_and_one_setting(self):
+        source = Path(self.temp.name) / "install.sh"
+        target = Path(self.temp.name) / "prepared.sh"
+        setting = "EXPECTED_MACOS_TEAM_ID='REPLACE_WITH_APPLE_TEAM_ID'"
+        source.write_text(setting + "\n", encoding="utf-8")
+        for team in ("", "short", "ABC1234567\n", "'; exit 0;"):
+            with self.subTest(team=team), self.assertRaisesRegex(ValueError, "MACOS_SIGN_TEAM_ID"):
+                release.prepare_shell_installer(source, target, team)
+            self.assertFalse(target.exists())
+        for template in ("no setting", setting + "\n" + setting):
+            source.write_text(template, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "one Apple team ID setting"):
+                release.prepare_shell_installer(source, target, "ABC1234567")
+
+    def test_stage_checksums_the_configured_shell_installer(self):
+        source = Path(self.temp.name) / "source"
+        (source / "scripts").mkdir(parents=True)
+        (source / "packaging").mkdir()
+        (source / "dist").mkdir()
+        # Checkout on Windows can use CRLF. The published shell file must use LF.
+        template = Path(__file__).with_name("install.sh").read_text(encoding="utf-8")
+        (source / "scripts/install.sh").write_bytes(template.replace("\n", "\r\n").encode())
+        for name in ("install.ps1", "uninstall.ps1"):
+            (source / "packaging" / name).write_text("signed fixture")
+        for platform in release.PLATFORMS:
+            (source / "dist" / release.archive_name(self.ctx["tag"], *platform)).write_bytes(b"archive fixture")
+        (source / "dist/lettermint.rb").write_text("cask fixture")
+        with chdir(source), patch.dict(os.environ, MACOS_SIGN_TEAM_ID="ABC1234567"):
+            release.stage(self.root, self.ctx)
+        installer = self.root / "assets/install.sh"
+        expected = template.replace("REPLACE_WITH_APPLE_TEAM_ID", "ABC1234567").encode()
+        self.assertEqual(installer.read_bytes(), expected)
+        self.assertIn(f"{release.digest(installer)}  install.sh\n",
+                      (self.root / "assets/checksums.txt").read_text())
+        release.verify_bundle(self.root, self.ctx)
+        installer.write_bytes(expected + b"# changed\n")
+        with self.assertRaisesRegex(ValueError, "changed: assets/install.sh"):
             release.verify_bundle(self.root, self.ctx)
 
     def test_restore_reuses_exact_artifact(self):

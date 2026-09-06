@@ -30,6 +30,8 @@ Signing is required for a release. Set these values in the `release` environment
 
 The signing steps receive the signing secrets. Other steps use only public publisher identifiers. Never include a client secret in the executable. The workflow stops if a signing setting is missing. The current Windows signing script uses a certificate with an accessible private key. If the selected provider requires a hardware device or remote service, change and test that signing step before a release.
 
+The workflow copies `scripts/install.sh` into the release assets and sets its public Apple team ID from `MACOS_SIGN_TEAM_ID` before it calculates checksums. Keep the placeholder in the source file. The released file uses LF line endings, including when the build runs on Windows. Its checksum and build provenance are included with the release. The shell script checks the downloaded macOS executable's signature; the script itself has no Authenticode signature.
+
 Create `lettermint/homebrew-tap` with `main` as its default branch. Give `HOMEBREW_TAP_TOKEN` access only to that repository, with Contents and Pull requests write permissions. Do not use a token with access to other private repositories. Require the tap's cask checks and manual review before merge.
 
 ## Publish a version
@@ -39,10 +41,12 @@ Create `lettermint/homebrew-tap` with `main` as its default branch. Give `HOMEBR
 3. Create the GitHub release for that tag. Enter the title and notes. For a version with a suffix, select **Set as a pre-release**. Select **Publish release** to start the build. Publishing a draft also starts it.
 4. Monitor the Release workflow. It checks the exact tag and runs CI. GoReleaser then builds, signs, notarizes, and packages without publishing. The workflow scans extracted package contents and checks the same packages on all six native platforms.
 5. Check that all jobs pass. The workflow checks signatures, expected publishers, notarization, version output, installation, replacement, removal, Unicode paths, and both PowerShell versions. It then generates and verifies build provenance.
-6. Download and verify the release files. Only six archives, two signed installer scripts, `checksums.txt`, and `provenance.jsonl` are attached. Checksums cover all archives and scripts. Provenance covers those files and the checksum file. Build directories and signing material are never release assets.
+6. Download and verify the release files. Only six archives, `install.sh`, the signed `install.ps1` and `uninstall.ps1`, `checksums.txt`, and `provenance.jsonl` are attached. Checksums cover all archives and scripts. Provenance covers those files and the checksum file. Build directories and signing material are never release assets.
 7. For the newest stable release, review the automatic cask PR in `lettermint/homebrew-tap`. The workflow checks cask style, online audit, installation, replacement, and removal before it opens the PR. Tap CI checks both Mac architectures and rejects an older version. Merge manually after the checks pass. Pre-releases do not update the tap.
 
 Use a pre-release to test the complete signed process before the first stable release. Test a failed upload and retry. Confirm that the saved files are reused and that the release notes stay unchanged. Also check installation and upgrade from a prior signed version when one exists. First-release CI uses the new package to test replacement and downgrade protection; it cannot test compatibility with a prior signed release that does not yet exist.
+
+The website download links under `https://lettermint.co/cli/` redirect to the latest stable release assets. See the [download paths](installation.md#website-download-links). Before the first stable release, use files from the selected pre-release page. After publication, check the website links and test installation through those links. Keep signed PowerShell files unchanged when serving them.
 
 ## Retry a failed release
 

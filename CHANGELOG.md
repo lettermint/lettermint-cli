@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a macOS and Linux shell installer to release assets and document website download links.
 - Add a branded terminal welcome, readable tables, action results, and local webhook status lines.
 - Select JSON automatically in pipes; add `--plain` and `--color` for human output.
 - Keep field errors readable and escape terminal control characters in displayed data.

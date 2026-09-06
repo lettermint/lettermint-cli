@@ -92,6 +92,8 @@ jobs:
       - name: Select release files and calculate their final checksums
         if: steps.saved.outputs.restored != 'true'
         run: python scripts/release.py stage
+        env:
+          MACOS_SIGN_TEAM_ID: ${{ vars.MACOS_SIGN_TEAM_ID }}
       - name: Extract all packages for the secret scan
         run: python scripts/release.py scan --target smoke
       - name: Scan final package contents
@@ -133,7 +135,7 @@ jobs:
           path: release-bundle/
       - name: Verify checksums and extract the native package
         run: python scripts/release.py unpack --system ${{ matrix.system }} --arch ${{ matrix.arch }}
-      - name: Check native signatures, notarization, version, and manual installation
+      - name: Check native signatures, notarization, version, and shell installation
         if: runner.os != 'Windows'
         run: python scripts/verify-unix-release.py
         env:
