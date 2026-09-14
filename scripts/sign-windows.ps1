@@ -1,17 +1,30 @@
+#Requires -Version 7.2
 param([Parameter(Mandatory=$true)][string]$Path)
 $ErrorActionPreference = 'Stop'
-if (-not $env:WINDOWS_SIGN_P12 -or -not $env:WINDOWS_SIGN_PASSWORD) { throw 'Windows signing credentials are required.' }
-$bytes = [Convert]::FromBase64String($env:WINDOWS_SIGN_P12)
-$certificate = $null
-try {
-    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
-        $bytes, $env:WINDOWS_SIGN_PASSWORD,
-        [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet)
-    if (-not $certificate.HasPrivateKey) { throw 'The signing certificate has no private key.' }
-    $result = Set-AuthenticodeSignature -FilePath $Path -Certificate $certificate -HashAlgorithm SHA256 -TimestampServer 'https://timestamp.digicert.com'
-    if ($result.Status -ne 'Valid') { throw "Signature validation failed: $($result.Status)" }
-    if (-not $result.TimeStamperCertificate) { throw 'The signature has no trusted timestamp.' }
-} finally {
-    if ($certificate) { $certificate.Dispose() }
-    [Array]::Clear($bytes, 0, $bytes.Length)
+Set-StrictMode -Version Latest
+foreach ($name in @('ARTIFACT_SIGNING_ENDPOINT', 'ARTIFACT_SIGNING_ACCOUNT_NAME', 'ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME')) {
+    if (-not [Environment]::GetEnvironmentVariable($name)) { throw "Missing signing setting: $name" }
 }
+Import-Module ArtifactSigning -RequiredVersion 0.1.8 -ErrorAction Stop
+$signing = @{
+    Endpoint = $env:ARTIFACT_SIGNING_ENDPOINT
+    CodeSigningAccountName = $env:ARTIFACT_SIGNING_ACCOUNT_NAME
+    CertificateProfileName = $env:ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME
+    Files = (Resolve-Path -LiteralPath $Path).Path
+    FileDigest = 'SHA256'
+    TimestampRfc3161 = 'http://timestamp.acs.microsoft.com'
+    TimestampDigest = 'SHA256'
+    ExcludeEnvironmentCredential = $true
+    ExcludeWorkloadIdentityCredential = $true
+    ExcludeManagedIdentityCredential = $true
+    ExcludeSharedTokenCacheCredential = $true
+    ExcludeVisualStudioCredential = $true
+    ExcludeVisualStudioCodeCredential = $true
+    ExcludeAzureCliCredential = $false
+    ExcludeAzurePowerShellCredential = $true
+    ExcludeAzureDeveloperCliCredential = $true
+    ExcludeInteractiveBrowserCredential = $true
+}
+Invoke-ArtifactSigning @signing
+. (Join-Path $PSScriptRoot 'verify-windows-signature.ps1')
+Assert-LettermintSignature -Path $Path

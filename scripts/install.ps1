@@ -8,7 +8,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $signature = Get-AuthenticodeSignature -FilePath $PSCommandPath
-if ($signature.Status -ne 'Valid') { throw 'Use a signed installer from a Lettermint release.' }
+if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate -or
+    -not $signature.SignerCertificate -or
+    $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -cne 'Lettermint B.V.') {
+    throw 'Use a signed installer from a Lettermint release.'
+}
 $root = Join-Path $env:LOCALAPPDATA 'Lettermint CLI'
 $bin = Join-Path $root 'bin'
 $marker = Join-Path $root 'install.json'
@@ -35,7 +39,9 @@ try {
     Expand-Archive -LiteralPath (Join-Path $temp $archive) -DestinationPath (Join-Path $temp 'files')
     $source = Join-Path $temp 'files/lettermint.exe'
     $binarySignature = Get-AuthenticodeSignature -FilePath $source
-    if ($binarySignature.Status -ne 'Valid' -or $binarySignature.SignerCertificate.Thumbprint -ne $signature.SignerCertificate.Thumbprint) {
+    if ($binarySignature.Status -ne 'Valid' -or -not $binarySignature.TimeStamperCertificate -or
+        -not $binarySignature.SignerCertificate -or
+        $binarySignature.SignerCertificate.Subject -cne $signature.SignerCertificate.Subject) {
         throw 'The binary must have a valid signature from the installer publisher.'
     }
     $reported = & $source version --json | ConvertFrom-Json

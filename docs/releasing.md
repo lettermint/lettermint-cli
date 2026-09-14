@@ -18,9 +18,12 @@ Signing is required for a release. Set these values in the `release` environment
 |---|---|---|
 | Variable | `CLI_OAUTH_CLIENT_ID` | Approved public OAuth client ID |
 | Variable | `MACOS_SIGN_TEAM_ID` | Expected Apple team identifier |
-| Variable | `WINDOWS_SIGN_THUMBPRINT` | Expected Windows publisher certificate thumbprint |
-| Secret | `WINDOWS_SIGN_P12` | Base64 code-signing certificate and private key |
-| Secret | `WINDOWS_SIGN_PASSWORD` | Password for that certificate |
+| Variable | `AZURE_CLIENT_ID` | Azure application client ID |
+| Variable | `AZURE_TENANT_ID` | Azure tenant ID |
+| Variable | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
+| Variable | `ARTIFACT_SIGNING_ENDPOINT` | Regional HTTPS signing endpoint |
+| Variable | `ARTIFACT_SIGNING_ACCOUNT_NAME` | Artifact Signing account name |
+| Variable | `ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME` | Public Trust certificate profile name |
 | Secret | `MACOS_SIGN_P12` | Base64 Developer ID Application certificate and private key |
 | Secret | `MACOS_SIGN_PASSWORD` | Password for that certificate |
 | Secret | `MACOS_NOTARY_ISSUER_ID` | App Store Connect issuer ID |
@@ -28,7 +31,9 @@ Signing is required for a release. Set these values in the `release` environment
 | Secret | `MACOS_NOTARY_KEY` | Base64 App Store Connect private key |
 | Secret | `HOMEBREW_TAP_TOKEN` | Token restricted to the Homebrew tap |
 
-The signing steps receive the signing secrets. Other steps use only public publisher identifiers. Never include a client secret in the executable. The workflow stops if a signing setting is missing. The current Windows signing script uses a certificate with an accessible private key. If the selected provider requires a hardware device or remote service, change and test that signing step before a release.
+The signing steps receive the signing secrets. Other steps use only public publisher identifiers. Never include a client secret in the executable. The workflow stops if a signing setting is missing. Windows signing uses Azure Artifact Signing with OIDC. Configure the Azure application's federated credential with issuer `https://token.actions.githubusercontent.com`, subject `repo:lettermint/lettermint-cli:environment:release`, and audience `api://AzureADTokenExchange`. Assign the Artifact Signing Certificate Profile Signer role at the selected certificate profile. Its verified publisher must be `Lettermint B.V.`. GitHub does not store a Windows private key or Azure client secret.
+
+The package job uses the pinned ArtifactSigning PowerShell module. It signs the installers and both Windows executables before packaging. Signature checks require a trusted Lettermint publisher and a timestamp. The installer compares publisher subjects because Azure can use different short-lived certificates for each signature. A retry with saved packages skips Azure login and signing.
 
 The workflow copies `scripts/install.sh` into the release assets and sets its public Apple team ID from `MACOS_SIGN_TEAM_ID` before it calculates checksums. Keep the placeholder in the source file. The released file uses LF line endings, including when the build runs on Windows. Its checksum and build provenance are included with the release. The shell script checks the downloaded macOS executable's signature; the script itself has no Authenticode signature.
 

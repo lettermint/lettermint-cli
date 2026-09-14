@@ -4,13 +4,9 @@ Set-StrictMode -Version Latest
 $assets = (Resolve-Path 'release-bundle/assets').Path
 $binary = (Resolve-Path 'smoke/lettermint.exe').Path
 $tag = (Get-Content -Raw $env:GITHUB_EVENT_PATH | ConvertFrom-Json).release.tag_name
-if (-not $env:WINDOWS_SIGN_THUMBPRINT) { throw 'The expected Windows publisher is required.' }
+. (Join-Path $PSScriptRoot 'verify-windows-signature.ps1')
 foreach ($path in @($binary, (Join-Path $assets 'install.ps1'), (Join-Path $assets 'uninstall.ps1'))) {
-    $signature = Get-AuthenticodeSignature -LiteralPath $path
-    if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate -or
-        $signature.SignerCertificate.Thumbprint -ne $env:WINDOWS_SIGN_THUMBPRINT) {
-        throw "Invalid release signature or publisher: $path"
-    }
+    Assert-LettermintSignature -Path $path
 }
 $reported = & $binary version --json | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0 -or $reported.version -ne $tag.Substring(1)) { throw 'Incorrect release version.' }
