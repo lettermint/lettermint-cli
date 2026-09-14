@@ -32,7 +32,7 @@ $root = Join-Path $testRoot 'Lettermint CLI'
 $target = Join-Path $root 'bin/lettermint.exe'
 $marker = Join-Path $root 'install.json'
 try {
-    & $install -Version $tag
+    & $install
     if (-not (Test-Path $target)) { throw 'Install failed.' }
     @{ manager='lettermint-powershell'; version='v0.0.0' } | ConvertTo-Json | Set-Content $marker -Encoding UTF8
     & $install -Version $tag

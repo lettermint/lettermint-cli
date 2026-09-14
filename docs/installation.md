@@ -17,16 +17,15 @@ Homebrew owns this installation. Do not replace its executable with a script. Fo
 For the latest stable release, download `install.ps1` through the website redirect. Check its Authenticode signature before you run it. It must show a valid Lettermint publisher certificate.
 
 ```powershell
-$version = (Invoke-RestMethod 'https://api.github.com/repos/lettermint/lettermint-cli/releases/latest').tag_name
 $installer = Join-Path $env:TEMP 'lettermint-install.ps1'
 Invoke-WebRequest -UseBasicParsing 'https://lettermint.co/cli/install.ps1' -OutFile $installer
 Get-AuthenticodeSignature $installer
-& $installer -Version $version
+powershell -NoProfile -ExecutionPolicy AllSigned -File $installer
 ```
 
 Save the file before execution. Do not pipe it to `Invoke-Expression`: the script must read its own file to check its signature.
 
-The installer requires an exact version. The commands above get that version from GitHub. For an older release or a pre-release, download `install.ps1` from that release and use its exact tag with `-Version`, such as `-Version v1.0.0-rc.1`.
+Each signed installer contains its exact release version. The commands above install that version without a separate API lookup. For an older release or a pre-release, download `install.ps1` from that release and use its exact tag with `-Version`, such as `-Version v1.0.0-rc.1`.
 
 The installer checks the archive checksum, binary version, and publisher signature before it replaces `lettermint.exe`. It installs under the current user's LocalAppData directory and adds its `bin` directory to the user PATH. Open a new terminal after installation. Run the selected release's installer again to upgrade. Use `-AllowDowngrade` for an intentional downgrade.
 

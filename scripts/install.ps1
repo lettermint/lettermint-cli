@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)][ValidatePattern('^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$')][string]$Version,
+    [ValidatePattern('^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$')][string]$Version = 'REPLACE_WITH_RELEASE_TAG',
     [switch]$AllowDowngrade
 )
 $ErrorActionPreference = 'Stop'
@@ -13,6 +13,7 @@ if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate -or
     $signature.SignerCertificate.GetNameInfo([System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -cne 'Lettermint B.V.') {
     throw 'Use a signed installer from a Lettermint release.'
 }
+if ($Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') { throw 'Use the installer from a published release or specify -Version.' }
 $root = Join-Path $env:LOCALAPPDATA 'Lettermint CLI'
 $bin = Join-Path $root 'bin'
 $marker = Join-Path $root 'install.json'

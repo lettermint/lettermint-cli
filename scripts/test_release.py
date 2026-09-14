@@ -106,6 +106,26 @@ class ReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one Apple team ID setting"):
                 release.prepare_shell_installer(source, target, "ABC1234567")
 
+    def test_windows_installer_defaults_to_its_release_version_before_signing(self):
+        source = Path(self.temp.name) / "source"
+        target = Path(self.temp.name) / "packaging"
+        source.mkdir()
+        template = Path(__file__).with_name("install.ps1").read_text(encoding="utf-8")
+        (source / "install.ps1").write_text(template, encoding="utf-8")
+        (source / "uninstall.ps1").write_bytes(b"unchanged uninstaller\r\n")
+        release.prepare_windows_installers(source, target, "v1.0.0-rc.1")
+        rendered = (target / "install.ps1").read_text(encoding="utf-8")
+        self.assertIn("$Version = 'v1.0.0-rc.1'", rendered)
+        self.assertNotIn("REPLACE_WITH_RELEASE_TAG", rendered)
+        self.assertEqual(template.replace("REPLACE_WITH_RELEASE_TAG", "v1.0.0-rc.1"), rendered)
+        self.assertEqual((source / "uninstall.ps1").read_bytes(), (target / "uninstall.ps1").read_bytes())
+        with self.assertRaises(ValueError):
+            release.prepare_windows_installers(source, target, "v1.0.0';command")
+        for invalid in ("no placeholder", template + "REPLACE_WITH_RELEASE_TAG"):
+            (source / "install.ps1").write_text(invalid, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "one release tag"):
+                release.prepare_windows_installers(source, target, "v1.0.0")
+
     def test_stage_checksums_the_configured_shell_installer(self):
         source = Path(self.temp.name) / "source"
         (source / "scripts").mkdir(parents=True)

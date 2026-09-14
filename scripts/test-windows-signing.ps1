@@ -70,6 +70,13 @@ try {
         try { & (Join-Path $PSScriptRoot 'install.ps1') -Version $testVersion } catch { $message = $_.Exception.Message }
         if ($message -notmatch $case.Error) { throw "Unexpected installer result: $message" }
     }
+    $signingTestState.Binary = New-TestSignature
+    $renderedInstaller = Join-Path $testRoot 'install.ps1'
+    $template = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'install.ps1'))
+    [IO.File]::WriteAllText($renderedInstaller, $template.Replace('REPLACE_WITH_RELEASE_TAG', $testVersion))
+    $message = ''
+    try { & $renderedInstaller } catch { $message = $_.Exception.Message }
+    if ($message -notmatch 'binary version does not match') { throw "Embedded installer version failed: $message" }
     $signingTestState.Installer = New-TestSignature -Name 'Another publisher'
     $rejected = $false
     try { & (Join-Path $PSScriptRoot 'install.ps1') -Version $testVersion } catch { $rejected = $_.Exception.Message -match 'signed installer' }

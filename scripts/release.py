@@ -156,6 +156,17 @@ def prepare_shell_installer(source, target, team_id):
                       encoding="utf-8", newline="\n")
 
 
+def prepare_windows_installers(source, target, tag):
+    version(tag)
+    template = (source / "install.ps1").read_text(encoding="utf-8")
+    placeholder = "REPLACE_WITH_RELEASE_TAG"
+    if template.count(placeholder) != 1:
+        raise ValueError("The PowerShell installer must contain one release tag setting.")
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "install.ps1").write_text(template.replace(placeholder, tag), encoding="utf-8", newline="\r\n")
+    shutil.copyfile(source / "uninstall.ps1", target / "uninstall.ps1")
+
+
 def stage(root, ctx):
     root.mkdir()
     (root / "assets").mkdir()
@@ -332,7 +343,7 @@ def output(name, value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["gate", "settings", "restore", "stage", "verify", "unpack", "scan", "seal", "upload", "tap-gate"])
+    parser.add_argument("command", choices=["gate", "settings", "prepare-windows", "restore", "stage", "verify", "unpack", "scan", "seal", "upload", "tap-gate"])
     parser.add_argument("--root", type=Path, default=Path("release-bundle"))
     parser.add_argument("--kind", choices=["packages", "verified"], default="packages")
     parser.add_argument("--system", choices=["darwin", "linux", "windows"])
@@ -345,6 +356,8 @@ def main():
     ctx = context()
     if args.command == "gate":
         gate(ctx)
+    elif args.command == "prepare-windows":
+        prepare_windows_installers(Path("scripts"), Path("packaging"), ctx["tag"])
     elif args.command == "restore":
         output("restored", str(restore(args.root, ctx, args.kind)).lower())
     elif args.command == "stage":

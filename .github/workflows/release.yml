@@ -89,8 +89,8 @@ jobs:
           ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
         run: |
           Install-Module -Name ArtifactSigning -RequiredVersion 0.1.8 -Scope CurrentUser -Force -Repository PSGallery
-          New-Item -ItemType Directory packaging | Out-Null
-          Copy-Item scripts/install.ps1, scripts/uninstall.ps1 packaging/
+          python scripts/release.py prepare-windows
+          if ($LASTEXITCODE -ne 0) { throw 'Installer preparation failed.' }
           Get-ChildItem packaging/*.ps1 | ForEach-Object { ./scripts/sign-windows.ps1 -Path $_.FullName }
       - name: Build, sign, notarize, and package without publishing
         if: steps.saved.outputs.restored != 'true'
