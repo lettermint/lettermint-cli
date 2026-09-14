@@ -37,6 +37,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -54,25 +55,42 @@ jobs:
         run: python scripts/release.py restore --kind packages
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Check signing settings and sign the installers
+      - name: Check signing settings
         if: steps.saved.outputs.restored != 'true'
         shell: pwsh
         env:
           CLI_OAUTH_CLIENT_ID: ${{ vars.CLI_OAUTH_CLIENT_ID }}
-          WINDOWS_SIGN_P12: ${{ secrets.WINDOWS_SIGN_P12 }}
-          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
           MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
           MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
           MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
           MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
           MACOS_SIGN_TEAM_ID: ${{ vars.MACOS_SIGN_TEAM_ID }}
-          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
+        run: python scripts/release.py settings
+      - name: Sign in to Azure with OIDC
+        if: steps.saved.outputs.restored != 'true'
+        uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Install the Artifact Signing client and sign the installers
+        if: steps.saved.outputs.restored != 'true'
+        shell: pwsh
+        env:
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
         run: |
-          python scripts/release.py settings
-          if ($LASTEXITCODE -ne 0) { throw 'Release settings are incomplete.' }
-          New-Item -ItemType Directory packaging | Out-Null
-          Copy-Item scripts/install.ps1, scripts/uninstall.ps1 packaging/
+          Install-Module -Name ArtifactSigning -RequiredVersion 0.1.8 -Scope CurrentUser -Force -Repository PSGallery
+          python scripts/release.py prepare-windows
+          if ($LASTEXITCODE -ne 0) { throw 'Installer preparation failed.' }
           Get-ChildItem packaging/*.ps1 | ForEach-Object { ./scripts/sign-windows.ps1 -Path $_.FullName }
       - name: Build, sign, notarize, and package without publishing
         if: steps.saved.outputs.restored != 'true'
@@ -82,8 +100,9 @@ jobs:
           args: release --clean --skip=publish
         env:
           CLI_OAUTH_CLIENT_ID: ${{ vars.CLI_OAUTH_CLIENT_ID }}
-          WINDOWS_SIGN_P12: ${{ secrets.WINDOWS_SIGN_P12 }}
-          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
           MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
           MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
           MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
@@ -144,14 +163,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/verify-windows-release.ps1
-        env:
-          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
       - name: Check signed installation with PowerShell 5.1
         if: runner.os == 'Windows'
         shell: powershell
         run: ./scripts/verify-windows-release.ps1
-        env:
-          WINDOWS_SIGN_THUMBPRINT: ${{ vars.WINDOWS_SIGN_THUMBPRINT }}
 
   attest:
     needs: verify

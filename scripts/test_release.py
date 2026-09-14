@@ -52,11 +52,31 @@ class ReleaseTest(unittest.TestCase):
     def test_missing_signing_settings_stop_release(self):
         settings = dict.fromkeys(release.SIGNING_SETTINGS, "present")
         settings["MACOS_SIGN_TEAM_ID"] = "AB12345678"
-        settings["WINDOWS_SIGN_THUMBPRINT"] = "A" * 40
+        for name in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"):
+            settings[name] = "12345678-1234-1234-1234-123456789abc"
+        settings["ARTIFACT_SIGNING_ENDPOINT"] = "https://weu.codesigning.azure.net/"
         release.check_settings(settings)
         for name in release.SIGNING_SETTINGS:
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, name):
                 release.check_settings({key: value for key, value in settings.items() if key != name})
+
+    def test_signing_settings_reject_invalid_azure_targets(self):
+        settings = dict.fromkeys(release.SIGNING_SETTINGS, "present")
+        settings["MACOS_SIGN_TEAM_ID"] = "AB12345678"
+        for name in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"):
+            settings[name] = "12345678-1234-1234-1234-123456789abc"
+        settings["ARTIFACT_SIGNING_ENDPOINT"] = "https://weu.codesigning.azure.net/"
+        invalid = {
+            "AZURE_CLIENT_ID": ["invalid", settings["AZURE_CLIENT_ID"] + "\n"],
+            "ARTIFACT_SIGNING_ENDPOINT": ["http://weu.codesigning.azure.net/",
+                "https://weu.codesigning.azure.net.attacker.example/", "https://user@weu.codesigning.azure.net/"],
+            "ARTIFACT_SIGNING_ACCOUNT_NAME": ["../account", "account;command"],
+            "ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME": ["profile/path", "profile\n"],
+        }
+        for name, values in invalid.items():
+            for value in values:
+                with self.subTest(name=name, value=value), self.assertRaisesRegex(ValueError, name):
+                    release.check_settings({**settings, name: value})
 
     def test_bundle_rejects_extra_files_changed_bytes_and_wrong_commit(self):
         self.bundle()
@@ -85,6 +105,26 @@ class ReleaseTest(unittest.TestCase):
             source.write_text(template, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "one Apple team ID setting"):
                 release.prepare_shell_installer(source, target, "ABC1234567")
+
+    def test_windows_installer_defaults_to_its_release_version_before_signing(self):
+        source = Path(self.temp.name) / "source"
+        target = Path(self.temp.name) / "packaging"
+        source.mkdir()
+        template = Path(__file__).with_name("install.ps1").read_text(encoding="utf-8")
+        (source / "install.ps1").write_text(template, encoding="utf-8")
+        (source / "uninstall.ps1").write_bytes(b"unchanged uninstaller\r\n")
+        release.prepare_windows_installers(source, target, "v1.0.0-rc.1")
+        rendered = (target / "install.ps1").read_text(encoding="utf-8")
+        self.assertIn("$Version = 'v1.0.0-rc.1'", rendered)
+        self.assertNotIn("REPLACE_WITH_RELEASE_TAG", rendered)
+        self.assertEqual(template.replace("REPLACE_WITH_RELEASE_TAG", "v1.0.0-rc.1"), rendered)
+        self.assertEqual((source / "uninstall.ps1").read_bytes(), (target / "uninstall.ps1").read_bytes())
+        with self.assertRaises(ValueError):
+            release.prepare_windows_installers(source, target, "v1.0.0';command")
+        for invalid in ("no placeholder", template + "REPLACE_WITH_RELEASE_TAG"):
+            (source / "install.ps1").write_text(invalid, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "one release tag"):
+                release.prepare_windows_installers(source, target, "v1.0.0")
 
     def test_stage_checksums_the_configured_shell_installer(self):
         source = Path(self.temp.name) / "source"

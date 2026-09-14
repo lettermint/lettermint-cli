@@ -23,13 +23,12 @@ brew install --cask lettermint/tap/lettermint
 ### PowerShell (Windows)
 
 ```powershell
-$version = (Invoke-RestMethod 'https://api.github.com/repos/lettermint/lettermint-cli/releases/latest').tag_name
-$installer = Join-Path $env:TEMP 'lettermint-install.ps1'
-Invoke-WebRequest -UseBasicParsing 'https://lettermint.co/cli/install.ps1' -OutFile $installer
-& $installer -Version $version
+$installer = "$env:TEMP\lettermint-install.ps1"
+iwr -UseBasicParsing https://lettermint.co/cli/install.ps1 -OutFile $installer
+powershell -NoProfile -ExecutionPolicy AllSigned -File $installer
 ```
 
-The Windows installer checks its signature from the saved file. Open a new terminal after installation. You can also get `lettermint.exe` inside a Windows ZIP from [GitHub releases](https://github.com/lettermint/lettermint-cli/releases).
+PowerShell checks the saved script signature before execution. If PowerShell asks you to trust the publisher, check that it is `Lettermint B.V.`. The installer uses its release version. Open a new terminal after installation. You can also get `lettermint.exe` inside a Windows ZIP from [GitHub releases](https://github.com/lettermint/lettermint-cli/releases).
 
 See the [installation guide](docs/installation.md) for exact versions, signature checks, manual downloads, updates, and removal.
 

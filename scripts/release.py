@@ -18,10 +18,11 @@ REPOSITORY = "lettermint/lettermint-cli"
 PLATFORMS = [(system, arch) for system in ("darwin", "linux", "windows")
              for arch in ("amd64", "arm64")]
 SIGNING_SETTINGS = (
-    "CLI_OAUTH_CLIENT_ID", "WINDOWS_SIGN_P12", "WINDOWS_SIGN_PASSWORD",
+    "CLI_OAUTH_CLIENT_ID", "AZURE_CLIENT_ID", "AZURE_TENANT_ID",
+    "AZURE_SUBSCRIPTION_ID", "ARTIFACT_SIGNING_ENDPOINT",
+    "ARTIFACT_SIGNING_ACCOUNT_NAME", "ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME",
     "MACOS_SIGN_P12", "MACOS_SIGN_PASSWORD", "MACOS_NOTARY_ISSUER_ID",
     "MACOS_NOTARY_KEY_ID", "MACOS_NOTARY_KEY", "MACOS_SIGN_TEAM_ID",
-    "WINDOWS_SIGN_THUMBPRINT",
 )
 TAG = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?")
 
@@ -94,8 +95,14 @@ def check_settings(environ):
         raise ValueError("Missing release settings: " + ", ".join(missing))
     if not re.fullmatch(r"[A-Z0-9]{10}", environ["MACOS_SIGN_TEAM_ID"]):
         raise ValueError("MACOS_SIGN_TEAM_ID must be an Apple team identifier.")
-    if not re.fullmatch(r"[0-9A-Fa-f]{40}", environ["WINDOWS_SIGN_THUMBPRINT"]):
-        raise ValueError("WINDOWS_SIGN_THUMBPRINT must be a certificate thumbprint.")
+    for name in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"):
+        if not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", environ[name]):
+            raise ValueError(f"{name} must be a UUID.")
+    if not re.fullmatch(r"https://[a-z0-9-]+\.codesigning\.azure\.net/?", environ["ARTIFACT_SIGNING_ENDPOINT"]):
+        raise ValueError("ARTIFACT_SIGNING_ENDPOINT must be an Azure HTTPS signing endpoint.")
+    for name in ("ARTIFACT_SIGNING_ACCOUNT_NAME", "ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME"):
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,100}", environ[name]):
+            raise ValueError(f"{name} must be an Azure resource name.")
 
 
 def archive_name(tag, system, arch):
@@ -147,6 +154,17 @@ def prepare_shell_installer(source, target, team_id):
         raise ValueError("The shell installer must contain one Apple team ID setting.")
     target.write_text(template.replace(setting, f"EXPECTED_MACOS_TEAM_ID='{team_id}'"),
                       encoding="utf-8", newline="\n")
+
+
+def prepare_windows_installers(source, target, tag):
+    version(tag)
+    template = (source / "install.ps1").read_text(encoding="utf-8")
+    placeholder = "REPLACE_WITH_RELEASE_TAG"
+    if template.count(placeholder) != 1:
+        raise ValueError("The PowerShell installer must contain one release tag setting.")
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "install.ps1").write_text(template.replace(placeholder, tag), encoding="utf-8", newline="\r\n")
+    shutil.copyfile(source / "uninstall.ps1", target / "uninstall.ps1")
 
 
 def stage(root, ctx):
@@ -325,7 +343,7 @@ def output(name, value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["gate", "settings", "restore", "stage", "verify", "unpack", "scan", "seal", "upload", "tap-gate"])
+    parser.add_argument("command", choices=["gate", "settings", "prepare-windows", "restore", "stage", "verify", "unpack", "scan", "seal", "upload", "tap-gate"])
     parser.add_argument("--root", type=Path, default=Path("release-bundle"))
     parser.add_argument("--kind", choices=["packages", "verified"], default="packages")
     parser.add_argument("--system", choices=["darwin", "linux", "windows"])
@@ -338,6 +356,8 @@ def main():
     ctx = context()
     if args.command == "gate":
         gate(ctx)
+    elif args.command == "prepare-windows":
+        prepare_windows_installers(Path("scripts"), Path("packaging"), ctx["tag"])
     elif args.command == "restore":
         output("restored", str(restore(args.root, ctx, args.kind)).lower())
     elif args.command == "stage":
