@@ -30,3 +30,24 @@ foreach ($invalid in @('1.0.0', 'v01.0.0', 'v1.0.0-01', 'v1.0.0-a..b', 'v1.0.0+b
     if (-not $rejected) { throw "Invalid version accepted: $invalid" }
 }
 Write-Output 'Windows stable and pre-release version checks passed.'
+
+$directory = Join-Path ([IO.Path]::GetTempPath()) ('CLI replacement ' + [Guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Path $directory | Out-Null
+    $source = Join-Path $directory 'next.exe'
+    $target = Join-Path $directory 'lettermint.exe'
+    [IO.File]::WriteAllText($source, 'first')
+    Install-LettermintBinary -Source $source -Target $target
+    if ((Test-Path $source) -or [IO.File]::ReadAllText($target) -ne 'first') { throw 'Initial file installation failed.' }
+    [IO.File]::WriteAllText($source, 'second')
+    Install-LettermintBinary -Source $source -Target $target
+    if ((Test-Path $source) -or [IO.File]::ReadAllText($target) -ne 'second') { throw 'File replacement failed.' }
+    [IO.File]::WriteAllText($source, 'third')
+    $lock = [IO.File]::Open($target, 'Open', 'Read', 'None')
+    $blocked = $false
+    try { Install-LettermintBinary -Source $source -Target $target } catch { $blocked = $true } finally { $lock.Dispose() }
+    if (-not $blocked -or [IO.File]::ReadAllText($target) -ne 'second' -or [IO.File]::ReadAllText($source) -ne 'third') {
+        throw 'A failed replacement did not preserve the installed file.'
+    }
+} finally { if (Test-Path $directory) { Remove-Item -LiteralPath $directory -Recurse -Force } }
+Write-Output 'Windows file installation, replacement, and locked-file checks passed.'

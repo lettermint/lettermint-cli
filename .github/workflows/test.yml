@@ -9,6 +9,11 @@ on:
         description: Optional release run whose saved packages should be checked
         required: false
         type: string
+      candidate_installers:
+        description: Test current unsigned installer code with the saved signed binaries
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -40,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_RUN_ID: ${{ inputs.release_run_id }}
         shell: bash
-        run: python scripts/check-saved-release.py --run "$RELEASE_RUN_ID" --system ${{ matrix.system }} --arch ${{ matrix.arch }}
+        run: python scripts/check-saved-release.py --run "$RELEASE_RUN_ID" --system ${{ matrix.system }} --arch ${{ matrix.arch }} ${{ inputs.candidate_installers && '--candidate-installers' || '' }}
   native:
     strategy:
       fail-fast: false

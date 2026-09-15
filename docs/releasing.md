@@ -77,6 +77,8 @@ Open the **Test** workflow and select **Run workflow**. Enter the original Relea
 
 These checks require no signing secrets and have read-only GitHub permissions. They check real signatures and native execution. Linux and Windows checks also exercise the original installers. macOS checks exercise the current publisher verification functions against the saved binaries. They do not submit to Apple, create provenance, publish files, or update Homebrew. The Release workflow must still verify Apple acceptance and the macOS installer before publication.
 
+To check a Windows installer fix, select `candidate_installers`. This mode first verifies the original executable and script signatures. It then tests the current unsigned installer with the saved signed executable. Only the candidate script's signature result is substituted; binary signature and checksum checks still run. Use this mode to test installer behavior before signing a new version. It does not prove that the candidate script is signed. The Release workflow always checks the actual signed installer without this substitution.
+
 Snapshots use no production signing keys. They cannot pass the production signature checks and cannot be uploaded by the Release workflow. The CLI has no self-update command. The package manager retains control of each installation.
 
 See [GitHub release events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#release), [GoReleaser signing](https://goreleaser.com/customization/sign/notarize/), [Apple notarization](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow), and [Homebrew casks](https://goreleaser.com/customization/publish/homebrew_casks/) for the tools used in this process.

@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--run", required=True, type=int)
     parser.add_argument("--system", required=True, choices=["darwin", "linux", "windows"])
     parser.add_argument("--arch", required=True, choices=["amd64", "arm64"])
+    parser.add_argument("--candidate-installers", action="store_true", help="Test current installer code separately from the saved signatures")
     args = parser.parse_args()
     if args.run <= 0:
         raise ValueError("A release run ID is required.")
@@ -54,14 +55,15 @@ def main():
     print(f"Checking saved {ctx['tag']} bytes from run {args.run} on {args.system}/{args.arch}.", flush=True)
     if args.system == "windows":
         for shell in ("pwsh", "powershell"):
-            subprocess.run([shell, "-NoProfile", "-File", "scripts/verify-windows-release.ps1"], env=environ, check=True)
+            subprocess.run([shell, "-NoProfile", "-File", "scripts/verify-windows-release.ps1",
+                            *(["-CandidateInstaller"] if args.candidate_installers else [])], env=environ, check=True)
     else:
         command = [sys.executable, "scripts/verify-unix-release.py"]
         if args.system == "darwin":
             command.append("--before-notarization")
         subprocess.run(command, env=environ, check=True)
     release.verify_bundle(root, ctx)
-    print("Saved package checks passed. No files were signed, submitted, attested, or published.")
+    print("Saved package checks passed. No release files were signed, submitted, attested, or published.")
 
 
 if __name__ == "__main__":

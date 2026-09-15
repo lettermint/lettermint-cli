@@ -52,6 +52,13 @@ function Compare-LettermintVersion {
     }
     return [Math]::Sign($leftPre.Count - $rightPre.Count)
 }
+function Install-LettermintBinary {
+    param([string]$Source, [string]$Target)
+    if (Test-Path -LiteralPath $Target) {
+        # PowerShell converts $null to an empty string for this .NET parameter.
+        [IO.File]::Replace($Source, $Target, [NullString]::Value)
+    } else { [IO.File]::Move($Source, $Target) }
+}
 Assert-LettermintVersion $Version
 $signature = Get-AuthenticodeSignature -FilePath $PSCommandPath
 if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate -or
@@ -105,9 +112,7 @@ if (Test-Path $marker) {
 
     $next = Join-Path $bin 'lettermint.next.exe'
     Copy-Item -LiteralPath $source -Destination $next -Force
-    if (Test-Path $target) {
-        [IO.File]::Replace($next, $target, $null)
-    } else { [IO.File]::Move($next, $target) }
+    Install-LettermintBinary -Source $next -Target $target
     @{ manager='lettermint-powershell'; version=$Version } | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
     $path = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (@($path -split ';') -notcontains $bin) {

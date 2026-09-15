@@ -35,4 +35,4 @@ try {
 
 & (Join-Path $PSScriptRoot 'test-windows-signing.ps1') -Binary $binary
 
-& (Join-Path $PSScriptRoot 'test-windows-versions.ps1')
+& (Join-Path $PSScriptRoot 'test-windows-install.ps1')

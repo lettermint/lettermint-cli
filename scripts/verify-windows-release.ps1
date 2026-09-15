@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+param([switch]$CandidateInstaller)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $assets = (Resolve-Path 'release-bundle/assets').Path
@@ -32,6 +33,23 @@ $root = Join-Path $testRoot 'Lettermint CLI'
 $target = Join-Path $root 'bin/lettermint.exe'
 $marker = Join-Path $root 'install.json'
 try {
+    if ($CandidateInstaller) {
+        # Saved releases retain their original signatures. Test the current installer
+        # separately with those binaries; only its unsigned script identity is substituted.
+        $candidateSignature = Get-AuthenticodeSignature -LiteralPath $install
+        $candidatePath = Join-Path $testRoot 'candidate-install.ps1'
+        New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+        $template = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'install.ps1'))
+        [IO.File]::WriteAllText($candidatePath, $template.Replace('REPLACE_WITH_RELEASE_TAG', $tag))
+        function Get-AuthenticodeSignature {
+            param([string]$LiteralPath, [string]$FilePath)
+            $path = if ($LiteralPath) { $LiteralPath } else { $FilePath }
+            if ([IO.Path]::GetFullPath($path) -eq $candidatePath) { return $candidateSignature }
+            Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $path
+        }
+        $install = $candidatePath
+        Write-Output 'Testing unsigned candidate installer behavior with the original signed binary. Release signing is still required.'
+    }
     & $install
     if (-not (Test-Path $target)) { throw 'Install failed.' }
     @{ manager='lettermint-powershell'; version='v0.0.0' } | ConvertTo-Json | Set-Content $marker -Encoding UTF8
@@ -54,5 +72,6 @@ try {
     [Environment]::SetEnvironmentVariable('Path', $previousPath, 'User')
     $env:LOCALAPPDATA = $previousLocal
     Remove-Item Function:Invoke-WebRequest
+    if ($CandidateInstaller) { Remove-Item Function:Get-AuthenticodeSignature -ErrorAction SilentlyContinue }
     if (Test-Path $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
 }

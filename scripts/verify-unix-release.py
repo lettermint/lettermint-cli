@@ -15,25 +15,23 @@ tag = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())["release"]["
 before_notarization = sys.argv[1:] == ["--before-notarization"]
 if sys.argv[1:] and not before_notarization:
     sys.exit("Unknown verification argument.")
-reported = json.loads(subprocess.check_output([str(binary), "version", "--json"], text=True)) if sys.platform != "darwin" else None
+if before_notarization and sys.platform != "darwin":
+    sys.exit("Pre-notarization checks require macOS.")
 if sys.platform == "darwin":
     team = os.environ.get("MACOS_SIGN_TEAM_ID")
     if not team:
         sys.exit("The expected Apple team identifier is required.")
     macos.verify_signature(binary, team)
-    reported = json.loads(subprocess.check_output([str(binary), "version", "--json"], text=True))
-    if before_notarization:
-        if reported["version"] != tag[1:]:
-            sys.exit("The release binary has the wrong version.")
-        subprocess.run([sys.executable, "scripts/test-macos-signature.py", str(binary), team], check=True)
-        subprocess.run([sys.executable, "scripts/test-terminal.py", str(binary)], check=True)
-        print("Native macOS checks passed. Notarization and installer checks remain required.")
-        sys.exit(0)
-    subprocess.run(["codesign", "--verify", "--strict", "-R=notarized", "--check-notarization", str(binary)], check=True)
-elif before_notarization:
-    sys.exit("Pre-notarization checks require macOS.")
+reported = json.loads(subprocess.check_output([str(binary), "version", "--json"], text=True))
 if reported["version"] != tag[1:]:
     sys.exit("The release binary has the wrong version.")
+if before_notarization:
+    subprocess.run([sys.executable, "scripts/test-macos-signature.py", str(binary), team], check=True)
+    subprocess.run([sys.executable, "scripts/test-terminal.py", str(binary)], check=True)
+    print("Native macOS checks passed. Notarization and installer checks remain required.")
+    sys.exit(0)
+if sys.platform == "darwin":
+    subprocess.run(["codesign", "--verify", "--strict", "-R=notarized", "--check-notarization", str(binary)], check=True)
 
 with tempfile.TemporaryDirectory(prefix="Lettermint café ") as directory:
     target = Path(directory) / "工具 bin/lettermint"
