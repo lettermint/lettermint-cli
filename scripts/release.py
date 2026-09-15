@@ -21,8 +21,7 @@ SIGNING_SETTINGS = (
     "CLI_OAUTH_CLIENT_ID", "AZURE_CLIENT_ID", "AZURE_TENANT_ID",
     "AZURE_SUBSCRIPTION_ID", "ARTIFACT_SIGNING_ENDPOINT",
     "ARTIFACT_SIGNING_ACCOUNT_NAME", "ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME",
-    "MACOS_SIGN_P12", "MACOS_SIGN_PASSWORD", "MACOS_NOTARY_ISSUER_ID",
-    "MACOS_NOTARY_KEY_ID", "MACOS_NOTARY_KEY", "MACOS_SIGN_TEAM_ID",
+    "MACOS_SIGN_P12", "MACOS_SIGN_PASSWORD", "MACOS_SIGN_TEAM_ID",
 )
 TAG = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?")
 
@@ -203,19 +202,25 @@ def completed_before(ctx, kind):
     return False
 
 
-def restore(root, ctx, kind):
+def restore_files(root, ctx, kind):
     artifacts = [item for page in pages(f"repos/{REPOSITORY}/actions/runs/{ctx['run_id']}/artifacts?per_page=100")
                  for item in page["artifacts"] if item["name"] == artifact_name(ctx, kind)]
     if len(artifacts) > 1 or any(item["expired"] for item in artifacts):
         raise ValueError("Saved release files are ambiguous or expired. Do not rebuild this release.")
     if not artifacts:
-        if current_release(ctx)["assets"] or completed_before(ctx, kind):
-            raise ValueError("Release files exist but the saved packages are missing. Do not rebuild this release.")
         return False
     if root.exists():
         shutil.rmtree(root)
     run("gh", "run", "download", str(ctx["run_id"]), "--repo", REPOSITORY,
         "--name", artifact_name(ctx, kind), "--dir", str(root))
+    return True
+
+
+def restore(root, ctx, kind):
+    if not restore_files(root, ctx, kind):
+        if current_release(ctx)["assets"] or completed_before(ctx, kind):
+            raise ValueError("Release files exist but the saved packages are missing. Do not rebuild this release.")
+        return False
     verify_bundle(root, ctx, provenance=kind == "verified")
     return True
 

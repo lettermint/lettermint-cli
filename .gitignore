@@ -19,4 +19,6 @@ dist/
 *.pem
 /release-bundle/
 /smoke/
+/notarization-state/
+/notarization-log.json
 __pycache__/
