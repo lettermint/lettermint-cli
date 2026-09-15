@@ -80,6 +80,7 @@ jobs:
           MACOS_SIGN_TEAM_ID: ${{ vars.MACOS_SIGN_TEAM_ID }}
         run: python scripts/release.py settings
       - name: Install the pinned Artifact Signing client
+        timeout-minutes: 5
         if: steps.saved.outputs.restored != 'true'
         shell: pwsh
         run: ./scripts/install-signing-client.ps1

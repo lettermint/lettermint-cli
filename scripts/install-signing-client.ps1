@@ -18,7 +18,9 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
             throw 'The pinned Artifact Signing client did not load.'
         }
         Write-Output 'ArtifactSigning 0.1.8 is installed and ready.'
-        return
+        # PackageManagement can leave a native NuGet error code after recovery.
+        # Report success only after the exact module and command have loaded.
+        exit 0
     } catch [System.Security.SecurityException] {
         throw
     } catch {

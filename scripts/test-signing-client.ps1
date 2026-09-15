@@ -11,7 +11,9 @@ if (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue) {
     Unregister-PSRepository -Name PSGallery -ErrorAction Stop
 }
 if (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue) { throw 'PSGallery was not removed for the test.' }
+$global:LASTEXITCODE = 23
 & $setup
+if ($LASTEXITCODE -ne 0) { throw 'Successful setup kept a stale native process exit code.' }
 $module = Get-Module -ListAvailable ArtifactSigning | Where-Object Version -eq ([version]'0.1.8')
 if (-not $module) { throw 'The pinned module was not installed.' }
 & $setup
