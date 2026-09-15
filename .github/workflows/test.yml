@@ -1,8 +1,51 @@
 name: Test
-on: [push, pull_request, workflow_call]
+on:
+  push:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: Optional release run whose saved packages should be checked
+        required: false
+        type: string
+      candidate_installers:
+        description: Test current unsigned installer code with the saved signed binaries
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
+  saved-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_run_id != ''
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, system: linux, arch: amd64}
+          - {runner: ubuntu-24.04-arm, system: linux, arch: arm64}
+          - {runner: macos-15-intel, system: darwin, arch: amd64}
+          - {runner: macos-15, system: darwin, arch: arm64}
+          - {runner: windows-2025, system: windows, arch: amd64}
+          - {runner: windows-11-arm, system: windows, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Check the saved signed packages without another release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+        shell: bash
+        run: python scripts/check-saved-release.py --run "$RELEASE_RUN_ID" --system ${{ matrix.system }} --arch ${{ matrix.arch }} ${{ inputs.candidate_installers && '--candidate-installers' || '' }}
   native:
     strategy:
       fail-fast: false

@@ -39,11 +39,14 @@ elif name == "curl":
         if not source.is_file(): sys.exit(22)
         shutil.copyfile(source, args[args.index("--output") + 1])
 elif name == "codesign":
-    if "--display" in args:
-        print("TeamIdentifier=" + os.environ.get("TEST_TEAM", "ABC1234567"), file=sys.stderr)
-    elif "--check-notarization" in args:
+    if "--check-notarization" in args:
         sys.exit(int(os.environ.get("TEST_NOTARY_FAIL", "0")))
     else:
+        requirement = next(arg for arg in args if arg.startswith("-R="))
+        assert "anchor apple generic" in requirement
+        assert "certificate leaf[field.1.2.840.113635.100.6.1.13] exists" in requirement
+        team = os.environ.get("TEST_TEAM", "ABC1234567")
+        if f'certificate leaf[subject.OU] = "{team}"' not in requirement: sys.exit(3)
         sys.exit(int(os.environ.get("TEST_SIGNATURE_FAIL", "0")))
 elif name == "gh":
     assert args[:2] == ["attestation", "verify"]

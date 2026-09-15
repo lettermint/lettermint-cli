@@ -78,12 +78,14 @@ class NotarizeTest(unittest.TestCase):
 
     def test_invalid_signature_or_wrong_publisher_stops_before_upload(self):
         binary = self.root / "binary"
-        for results in ([self.result(code=1)], [self.result(), self.result()],
-                        [self.result(), subprocess.CompletedProcess([], 0, "", "TeamIdentifier=OTHER12345\n")]):
-            with self.subTest(results=results), patch.object(notarize, "execute", side_effect=results), self.assertRaises(ValueError):
+        for code in (1, 3):
+            with self.subTest(code=code), patch.object(notarize, "execute", return_value=self.result(code=code)), self.assertRaises(ValueError):
                 notarize.verify_signature(binary, self.team)
-        with patch.object(notarize, "execute", side_effect=[self.result(), subprocess.CompletedProcess([], 0, "", f"TeamIdentifier={self.team}\n")]):
+        with patch.object(notarize, "execute", return_value=subprocess.CompletedProcess([], 0, "", "TeamIdentifier=not set\n")) as command:
             notarize.verify_signature(binary, self.team)
+        self.assertIn(f'certificate leaf[subject.OU] = "{self.team}"', command.call_args.args[0][3])
+        self.assertIn("anchor apple generic", command.call_args.args[0][3])
+        self.assertIn("certificate leaf[field.1.2.840.113635.100.6.1.13] exists", command.call_args.args[0][3])
 
     def test_submit_saves_id_only_after_successful_upload_and_does_not_wait(self):
         original = self.archive.read_bytes()

@@ -7,6 +7,59 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+function Assert-LettermintVersion {
+    param([string]$Value)
+    $core = '(0|[1-9][0-9]*)'
+    if ($Value -cnotmatch ('\Av' + $core + '\.' + $core + '\.' + $core + '(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\z')) {
+        throw 'Use a version such as v1.0.0 or v1.0.0-rc.1.'
+    }
+    $parts = $Value.Substring(1) -split '-', 2
+    if ($parts.Count -eq 2) {
+        foreach ($part in ($parts[1] -split '\.')) {
+            if ($part -cmatch '\A0[0-9]+\z') { throw 'Numeric pre-release identifiers must not have leading zeroes.' }
+        }
+    }
+}
+function Compare-LettermintNumber {
+    param([string]$Left, [string]$Right)
+    if ($Left.Length -ne $Right.Length) { return [Math]::Sign($Left.Length - $Right.Length) }
+    return [string]::CompareOrdinal($Left, $Right)
+}
+function Compare-LettermintVersion {
+    param([string]$Left, [string]$Right)
+    Assert-LettermintVersion $Left
+    Assert-LettermintVersion $Right
+    $leftParts = $Left.Substring(1) -split '-', 2
+    $rightParts = $Right.Substring(1) -split '-', 2
+    $leftCore = $leftParts[0] -split '\.'
+    $rightCore = $rightParts[0] -split '\.'
+    for ($i = 0; $i -lt 3; $i++) {
+        $order = Compare-LettermintNumber $leftCore[$i] $rightCore[$i]
+        if ($order -ne 0) { return $order }
+    }
+    if ($leftParts.Count -ne $rightParts.Count) { return $rightParts.Count - $leftParts.Count }
+    if ($leftParts.Count -eq 1) { return 0 }
+    $leftPre = $leftParts[1] -split '\.'
+    $rightPre = $rightParts[1] -split '\.'
+    for ($i = 0; $i -lt [Math]::Min($leftPre.Count, $rightPre.Count); $i++) {
+        $a = $leftPre[$i]; $b = $rightPre[$i]
+        if ($a -ceq $b) { continue }
+        $aNumber = $a -cmatch '\A[0-9]+\z'
+        $bNumber = $b -cmatch '\A[0-9]+\z'
+        if ($aNumber -and $bNumber) { return (Compare-LettermintNumber $a $b) }
+        if ($aNumber -ne $bNumber) { if ($aNumber) { return -1 }; return 1 }
+        return [string]::CompareOrdinal($a, $b)
+    }
+    return [Math]::Sign($leftPre.Count - $rightPre.Count)
+}
+function Install-LettermintBinary {
+    param([string]$Source, [string]$Target)
+    if (Test-Path -LiteralPath $Target) {
+        # PowerShell converts $null to an empty string for this .NET parameter.
+        [IO.File]::Replace($Source, $Target, [NullString]::Value)
+    } else { [IO.File]::Move($Source, $Target) }
+}
+Assert-LettermintVersion $Version
 $signature = Get-AuthenticodeSignature -FilePath $PSCommandPath
 if ($signature.Status -ne 'Valid' -or -not $signature.TimeStamperCertificate -or
     -not $signature.SignerCertificate -or
@@ -52,16 +105,14 @@ try {
 if (Test-Path $marker) {
     $installed = Get-Content -Raw -LiteralPath $marker | ConvertFrom-Json
     if ($installed.manager -ne 'lettermint-powershell') { throw 'Another package manager owns this install.' }
-    if (-not $AllowDowngrade -and [version](($Version -replace '^v','') -split '-')[0] -lt [version](($installed.version -replace '^v','') -split '-')[0]) {
+    if (-not $AllowDowngrade -and (Compare-LettermintVersion $Version $installed.version) -lt 0) {
         throw 'Use -AllowDowngrade to install an older version.'
     }
 }
 
     $next = Join-Path $bin 'lettermint.next.exe'
     Copy-Item -LiteralPath $source -Destination $next -Force
-    if (Test-Path $target) {
-        [IO.File]::Replace($next, $target, $null)
-    } else { [IO.File]::Move($next, $target) }
+    Install-LettermintBinary -Source $next -Target $target
     @{ manager='lettermint-powershell'; version=$Version } | ConvertTo-Json | Set-Content -LiteralPath $marker -Encoding UTF8
     $path = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (@($path -split ';') -notcontains $bin) {
