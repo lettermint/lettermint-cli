@@ -8,6 +8,8 @@ Use `main` as the default branch. Enable secret scanning, push protection, and p
 
 The Test workflow runs native checks on macOS, Linux, and Windows, on amd64 and arm64. Windows checks use PowerShell 5.1 and 7. Go race checks run where the Go toolchain supports them. Release-control tests and Gitleaks also run in CI. Actions use commit SHAs. GoReleaser and Gitleaks use exact versions.
 
+The Release workflow also runs for PRs that change workflow files. To check it on another branch, open **Release**, select **Run workflow**, and select the branch. These runs validate the actual reusable Test workflow call, including its token permissions, and run CI. Only a published release event can run the release gate, signing, notarization, attestation, publication, or Homebrew update. The test call grants `actions: read` because GitHub checks the saved-package job's permission even when that job is skipped.
+
 Before the initial push, review the exact committed files. Scan the commit and a clean export of that commit with Gitleaks. Local environment files, signing keys, IDE files, and build output must stay outside the commit. An empty Git history does not need a new Git directory.
 
 ## Signing setup

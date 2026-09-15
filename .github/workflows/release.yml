@@ -2,16 +2,20 @@ name: Release
 on:
   release:
     types: [published]
+  pull_request:
+    paths: ['.github/workflows/**']
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.event.release.id }}
+  group: release-${{ github.event.release.id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   gate:
+    if: github.event_name == 'release'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -28,10 +32,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
   test:
     needs: gate
+    if: ${{ !cancelled() && (github.event_name != 'release' || needs.gate.result == 'success') }}
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/test.yml
 
   package:
     needs: test
+    if: github.event_name == 'release'
     runs-on: windows-2025
     environment: release
     permissions:
