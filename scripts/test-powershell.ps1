@@ -34,3 +34,5 @@ try {
 } finally { if (Test-Path $path) { Remove-Item -LiteralPath $path -Recurse -Force } }
 
 & (Join-Path $PSScriptRoot 'test-windows-signing.ps1') -Binary $binary
+
+& (Join-Path $PSScriptRoot 'test-windows-versions.ps1')

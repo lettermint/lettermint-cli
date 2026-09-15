@@ -8,17 +8,32 @@ import subprocess
 import sys
 import tempfile
 
+import macos
+
 binary = Path("smoke/lettermint").resolve()
 tag = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())["release"]["tag_name"]
+before_notarization = sys.argv[1:] == ["--before-notarization"]
+if sys.argv[1:] and not before_notarization:
+    sys.exit("Unknown verification argument.")
+reported = json.loads(subprocess.check_output([str(binary), "version", "--json"], text=True)) if sys.platform != "darwin" else None
 if sys.platform == "darwin":
     team = os.environ.get("MACOS_SIGN_TEAM_ID")
     if not team:
         sys.exit("The expected Apple team identifier is required.")
-    subprocess.run(["codesign", "--verify", "--strict", "--verbose=2", str(binary)], check=True)
-    identity = subprocess.run(["codesign", "--display", "--verbose=4", str(binary)], capture_output=True, text=True, check=True)
-    if f"TeamIdentifier={team}" not in identity.stderr.splitlines():
-        sys.exit("The release binary has the wrong Apple publisher.")
+    macos.verify_signature(binary, team)
+    reported = json.loads(subprocess.check_output([str(binary), "version", "--json"], text=True))
+    if before_notarization:
+        if reported["version"] != tag[1:]:
+            sys.exit("The release binary has the wrong version.")
+        subprocess.run([sys.executable, "scripts/test-macos-signature.py", str(binary), team], check=True)
+        subprocess.run([sys.executable, "scripts/test-terminal.py", str(binary)], check=True)
+        print("Native macOS checks passed. Notarization and installer checks remain required.")
+        sys.exit(0)
     subprocess.run(["codesign", "--verify", "--strict", "-R=notarized", "--check-notarization", str(binary)], check=True)
+elif before_notarization:
+    sys.exit("Pre-notarization checks require macOS.")
+if reported["version"] != tag[1:]:
+    sys.exit("The release binary has the wrong version.")
 
 with tempfile.TemporaryDirectory(prefix="Lettermint café ") as directory:
     target = Path(directory) / "工具 bin/lettermint"

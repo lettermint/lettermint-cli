@@ -14,6 +14,7 @@ import tempfile
 import zipfile
 
 import release
+import macos
 
 SETTINGS = ("MACOS_NOTARY_ISSUER_ID", "MACOS_NOTARY_KEY_ID", "MACOS_NOTARY_KEY")
 SUBMIT_STEP = "Submit the signed macOS binary"
@@ -59,12 +60,7 @@ def notary(*args, timeout=120):
 
 
 def verify_signature(binary, team):
-    result = execute(["codesign", "--verify", "--strict", "--verbose=2", str(binary)])
-    if result.returncode:
-        raise ValueError("The macOS binary has an invalid signature.")
-    result = execute(["codesign", "--display", "--verbose=4", str(binary)])
-    if result.returncode or f"TeamIdentifier={team}" not in result.stderr.splitlines():
-        raise ValueError("The macOS binary has the wrong Apple publisher.")
+    macos.verify_signature(binary, team, runner=execute)
 
 
 @contextmanager

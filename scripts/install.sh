@@ -25,6 +25,12 @@ EOF
 fail() { printf 'Lettermint: %s\n' "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "Required command is missing: $1"; }
 
+verify_macos_publisher() {
+    # Check the signed certificate. Some signers omit CodeDirectory's team field.
+    publisher_requirement="anchor apple generic and certificate leaf[subject.OU] = \"$EXPECTED_MACOS_TEAM_ID\" and certificate leaf[field.1.2.840.113635.100.6.1.13] exists"
+    codesign --verify --strict "-R=$publisher_requirement" "$1" || fail 'The macOS signature or Lettermint publisher is invalid.'
+}
+
 valid_version() {
     LC_ALL=C awk -v value="$1" 'BEGIN {
         if (value !~ /^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/) exit 1
@@ -224,9 +230,7 @@ main() (
         tar -xzOf "$workspace/$archive" lettermint > "$workspace/lettermint" || fail 'Cannot extract the CLI executable.'
         chmod 755 "$workspace/lettermint"
         if [ "$system" = darwin ]; then
-            codesign --verify --strict "$workspace/lettermint" || fail 'The macOS code signature is invalid.'
-            codesign --display --verbose=4 "$workspace/lettermint" > "$workspace/identity.txt" 2>&1 || fail 'Cannot read the macOS publisher.'
-            grep -Fxq "TeamIdentifier=$EXPECTED_MACOS_TEAM_ID" "$workspace/identity.txt" || fail 'The macOS publisher does not match Lettermint.'
+            verify_macos_publisher "$workspace/lettermint"
             codesign --verify --strict -R=notarized --check-notarization "$workspace/lettermint" || fail 'macOS notarization could not be verified.'
         fi
         reported=$("$workspace/lettermint" version --json --no-input) || fail 'The downloaded CLI cannot run on this computer.'
