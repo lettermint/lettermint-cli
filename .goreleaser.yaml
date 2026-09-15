@@ -38,12 +38,8 @@ notarize:
       sign:
         certificate: '{{.Env.MACOS_SIGN_P12}}'
         password: '{{.Env.MACOS_SIGN_PASSWORD}}'
-      notarize:
-        wait: true
-        timeout: 20m
-        issuer_id: '{{.Env.MACOS_NOTARY_ISSUER_ID}}'
-        key_id: '{{.Env.MACOS_NOTARY_KEY_ID}}'
-        key: '{{.Env.MACOS_NOTARY_KEY}}'
+      # The workflow saves these signed packages before separate Apple submissions.
+      # Native notarization and verification must pass before publication.
 archives:
   - id: macos
     ids: [macos]
