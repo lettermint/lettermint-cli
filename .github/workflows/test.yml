@@ -98,6 +98,8 @@ jobs:
         with:
           version: v2.13.2
           args: release --snapshot --clean --skip=publish
+      - name: Verify release versions when tags share a commit
+        run: python3 scripts/check-release-tags.py
   release-checks:
     runs-on: ubuntu-24.04
     steps:
