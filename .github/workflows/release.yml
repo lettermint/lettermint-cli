@@ -381,5 +381,7 @@ jobs:
         if: steps.latest.outputs.eligible == 'true'
         run: python scripts/homebrew-pr.py
         env:
+          # Authenticate Homebrew's release checks with the read-only job token.
+          HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
           # Fine-grained token: only homebrew-tap, Contents and Pull requests write.
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
