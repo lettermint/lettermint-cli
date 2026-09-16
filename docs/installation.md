@@ -1,8 +1,8 @@
 # Install and remove the CLI
 
-These commands apply after the first signed release is published. No release is published from a local build.
-
 ## macOS
+
+The [Homebrew cask](https://github.com/lettermint/homebrew-tap) is pending publication. Use the [shell installer](#shell-installer-for-linux-and-macos) for now. Once the cask is available:
 
 ```sh
 brew install --cask lettermint/tap/lettermint
@@ -14,20 +14,20 @@ Homebrew owns this installation. Do not replace its executable with a script. Fo
 
 ## Windows
 
-For the latest stable release, download `install.ps1` through the website redirect. Check its Authenticode signature before you run it. It must show a valid Lettermint publisher certificate.
+For the latest stable release, download `install.ps1` through the website redirect. PowerShell checks the saved script's signature before execution:
 
 ```powershell
-$installer = Join-Path $env:TEMP 'lettermint-install.ps1'
-Invoke-WebRequest -UseBasicParsing 'https://lettermint.co/cli/install.ps1' -OutFile $installer
-Get-AuthenticodeSignature $installer
-powershell -NoProfile -ExecutionPolicy AllSigned -File $installer
+iwr -UseBasicParsing https://lettermint.co/cli/install.ps1 -OutFile "$env:TEMP\lettermint.ps1"
+powershell -NoProfile -ExecutionPolicy AllSigned -File "$env:TEMP\lettermint.ps1"
 ```
+
+If prompted, confirm that the publisher is **Lettermint B.V.** Open a new terminal after installation. To inspect the signature before execution, run `Get-AuthenticodeSignature "$env:TEMP\lettermint.ps1"` after the download.
 
 Save the file before execution. Do not pipe it to `Invoke-Expression`: the script must read its own file to check its signature.
 
 Each signed installer contains its exact release version. The commands above install that version without a separate API lookup. For an older release or a pre-release, download `install.ps1` from that release and use its exact tag with `-Version`, such as `-Version v1.0.0-rc.1`.
 
-The installer checks the archive checksum, binary version, and publisher signature before it replaces `lettermint.exe`. It installs under the current user's LocalAppData directory and adds its `bin` directory to the user PATH. Open a new terminal after installation. Run the selected release's installer again to upgrade. Use `-AllowDowngrade` for an intentional downgrade.
+The installer checks the archive checksum, binary version, and publisher signature before it replaces `lettermint.exe`. It installs under the current user's LocalAppData directory and adds its `bin` directory to the user PATH. Run the selected release's installer again to upgrade. Use `-AllowDowngrade` for an intentional downgrade.
 
 To remove a PowerShell installation, download and check the signed removal script:
 
