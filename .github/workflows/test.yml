@@ -17,6 +17,16 @@ on:
 permissions:
   contents: read
 jobs:
+  signing-client:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Recover the signing client from a missing package repository
+        shell: pwsh
+        run: ./scripts/test-signing-client.ps1
   saved-release:
     if: github.event_name == 'workflow_dispatch' && inputs.release_run_id != ''
     permissions:
