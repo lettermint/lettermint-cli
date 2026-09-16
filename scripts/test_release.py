@@ -126,11 +126,36 @@ class ReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "one release tag"):
                 release.prepare_windows_installers(source, target, "v1.0.0")
 
+    def test_stage_rejects_wrong_or_missing_build_metadata_before_copying(self):
+        source = Path(self.temp.name) / "source"
+        dist = source / "dist"
+        dist.mkdir(parents=True)
+        expected = {"tag": self.ctx["tag"], "version": self.ctx["tag"][1:], "commit": self.ctx["commit"]}
+        with chdir(source):
+            with self.assertRaises(FileNotFoundError):
+                release.stage(self.root, self.ctx)
+            self.assertFalse(self.root.exists())
+            for field, wrong in (("tag", "v1.2.3-rc.5"), ("version", "1.2.3-rc.5"), ("commit", "b" * 40)):
+                for value in (wrong, None):
+                    metadata = {**expected, field: value}
+                    if value is None:
+                        del metadata[field]
+                    (dist / "metadata.json").write_text(json.dumps(metadata))
+                    with self.subTest(field=field, value=value), self.assertRaisesRegex(ValueError, f"GoReleaser {field}"):
+                        release.stage(self.root, self.ctx)
+                    self.assertFalse(self.root.exists())
+            for tag in ("v1.2.3", "v1.2.3-rc.5"):
+                (dist / "metadata.json").write_text(json.dumps({**expected, "tag": tag, "version": tag[1:]}))
+                release.verify_build_metadata(dist, {**self.ctx, "tag": tag})
+
     def test_stage_checksums_the_configured_shell_installer(self):
         source = Path(self.temp.name) / "source"
         (source / "scripts").mkdir(parents=True)
         (source / "packaging").mkdir()
         (source / "dist").mkdir()
+        (source / "dist/metadata.json").write_text(json.dumps({
+            "tag": self.ctx["tag"], "version": self.ctx["tag"][1:], "commit": self.ctx["commit"],
+        }))
         # Checkout on Windows can use CRLF. The published shell file must use LF.
         template = Path(__file__).with_name("install.sh").read_text(encoding="utf-8")
         (source / "scripts/install.sh").write_bytes(template.replace("\n", "\r\n").encode())

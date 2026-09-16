@@ -166,7 +166,17 @@ def prepare_windows_installers(source, target, tag):
     shutil.copyfile(source / "uninstall.ps1", target / "uninstall.ps1")
 
 
+def verify_build_metadata(dist, ctx):
+    metadata = json.loads((dist / "metadata.json").read_text())
+    expected = {"tag": ctx["tag"], "version": ctx["tag"][1:], "commit": ctx["commit"]}
+    for field, value in expected.items():
+        if metadata.get(field) != value:
+            raise ValueError(f"GoReleaser {field} does not match the release: "
+                             f"expected {value!r}, got {metadata.get(field)!r}.")
+
+
 def stage(root, ctx):
+    verify_build_metadata(Path("dist"), ctx)
     root.mkdir()
     (root / "assets").mkdir()
     (root / "cask").mkdir()

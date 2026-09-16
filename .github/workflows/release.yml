@@ -106,6 +106,8 @@ jobs:
           # Artifact Signing hooks share metadata.json and must run one at a time.
           args: release --clean --skip=publish --parallelism 1
         env:
+          # Stable and pre-release tags can refer to the same commit.
+          GORELEASER_CURRENT_TAG: ${{ github.event.release.tag_name }}
           CLI_OAUTH_CLIENT_ID: ${{ vars.CLI_OAUTH_CLIENT_ID }}
           ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
           ARTIFACT_SIGNING_ACCOUNT_NAME: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}

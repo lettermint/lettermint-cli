@@ -93,11 +93,13 @@ jobs:
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: v2.13.2
-          args: check
-      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
-        with:
-          version: v2.13.2
-          args: release --snapshot --clean --skip=publish
+          install-only: true
+      - name: Check GoReleaser configuration
+        run: goreleaser check
+      - name: Build snapshot packages
+        run: goreleaser release --snapshot --clean --skip=publish
+      - name: Verify release versions when tags share a commit
+        run: python3 scripts/check-release-tags.py
   release-checks:
     runs-on: ubuntu-24.04
     steps:
