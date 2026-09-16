@@ -8,6 +8,14 @@ Send email, inspect messages, and test webhooks from your terminal. The official
 
 ## Installation
 
+### Homebrew · macOS
+
+```sh
+brew install --cask lettermint/tap/lettermint
+```
+
+The [Homebrew cask](https://github.com/lettermint/homebrew-tap) is pending publication. Use the shell installer until it is available.
+
 ### Shell · macOS and Linux
 
 ```sh
@@ -24,10 +32,6 @@ powershell -NoProfile -ExecutionPolicy AllSigned -File "$env:TEMP\lettermint.ps1
 If prompted, confirm that the publisher is **Lettermint B.V.** Open a new terminal after installation.
 
 For manual installation, Windows ZIP archives include `lettermint.exe`.
-
-### Homebrew · macOS
-
-The [Homebrew cask](https://github.com/lettermint/homebrew-tap) is pending publication. Use the shell installer for now.
 
 See the [installation guide](docs/installation.md) for manual downloads, exact versions, signature checks, updates, and removal.
 
