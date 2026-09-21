@@ -2,12 +2,10 @@
 
 ## macOS
 
-The [Homebrew cask](https://github.com/lettermint/homebrew-tap) is pending publication. Use the [shell installer](#shell-installer-for-linux-and-macos) for now. Once the cask is available:
-
 ```sh
-brew install --cask lettermint/tap/lettermint
-brew upgrade --cask lettermint
-brew uninstall --cask lettermint
+brew install lettermint/tap/lettermint
+brew upgrade lettermint
+brew uninstall lettermint
 ```
 
 Homebrew owns this installation. Do not replace its executable with a script. For an exact older version, use the matching release archive in a separate directory. You can also review the matching cask change in the tap history. Check the archive checksum and signature before use.

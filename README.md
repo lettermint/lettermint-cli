@@ -11,10 +11,8 @@ Send email, inspect messages, and test webhooks from your terminal. The official
 ### Homebrew · macOS
 
 ```sh
-brew install --cask lettermint/tap/lettermint
+brew install lettermint/tap/lettermint
 ```
-
-The [Homebrew cask](https://github.com/lettermint/homebrew-tap) is pending publication. Use the shell installer until it is available.
 
 ### Shell · macOS and Linux
 
