@@ -69,6 +69,23 @@ lettermint messages events MESSAGE_ID
 
 Use `--profile`, `--project`, or `--route` to override saved defaults for one command. See the [message guide](skills/lettermint-cli/references/messages.md) for JSON input, HTML, attachments, and content exports.
 
+### Switch teams
+
+Each profile belongs to one team. To connect another team, create a new profile and select that team in your browser:
+
+```sh
+lettermint auth login --name team-b
+```
+
+Login selects the new profile. To switch back to a saved profile, no logout is needed:
+
+```sh
+lettermint profiles list
+lettermint profiles use work
+```
+
+Each profile keeps its own project and route defaults. Use `--profile team-b` to select a different profile for one command.
+
 ## Local webhooks
 
 Start your local webhook handler, then forward events to it:
