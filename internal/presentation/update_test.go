@@ -26,7 +26,7 @@ func TestUpdateNoticeModes(t *testing.T) {
 			var out, diagnostic bytes.Buffer
 			terminal := Terminal{TTY: true, Width: 80, Profile: tc.profile}
 			p := WithTerminals(&out, &diagnostic, tc.options, terminal, terminal)
-			if err := p.UpdateAvailable("v1.0.0", "1.2.0"); err != nil {
+			if err := p.UpdateAvailable("v1.0.0", "1.2.0", []string{"Update with Homebrew:", "  brew update && brew upgrade --cask lettermint"}); err != nil {
 				t.Fatal(err)
 			}
 			if out.Len() != 0 || strings.Contains(diagnostic.String(), "\x1b") != tc.color {
@@ -34,6 +34,9 @@ func TestUpdateNoticeModes(t *testing.T) {
 			}
 			if tc.options.JSON != (diagnostic.Len() == 0) {
 				t.Fatal("incorrect notice visibility")
+			}
+			if !tc.options.JSON && !strings.Contains(diagnostic.String(), "  brew update && brew upgrade --cask lettermint\n") {
+				t.Fatal("missing update command")
 			}
 		})
 	}

@@ -132,7 +132,7 @@ func (a *app) configurePresentation(root *cobra.Command) {
 				check := a.checkUpdate(cmd, key)
 				defer check.Stop()
 				if check != nil && check.Cached != "" {
-					_ = ui.UpdateAvailable(a.version, check.Cached)
+					_ = ui.UpdateAvailable(a.version, check.Cached, update.Instructions(a.version, check.Cached))
 				}
 				// These commands produce raw bytes or help and must stay undecorated.
 				if key != "messages content" && !strings.HasPrefix(key, "completion") && key != "version" && cmd != root {
@@ -142,7 +142,7 @@ func (a *app) configurePresentation(root *cobra.Command) {
 				err := original(cmd, args)
 				ui.StopProgress()
 				if latest := check.Finish(err == nil && key != "webhooks listen"); latest != "" {
-					_ = ui.UpdateAvailable(a.version, latest)
+					_ = ui.UpdateAvailable(a.version, latest, update.Instructions(a.version, latest))
 				}
 				return err
 			}

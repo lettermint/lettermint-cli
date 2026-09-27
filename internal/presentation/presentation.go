@@ -169,14 +169,17 @@ func (p *Presenter) UpdateNotifications() bool {
 	return !p.JSON() && p.output.TTY && p.diagnostic.TTY
 }
 
-func (p *Presenter) UpdateAvailable(current, latest string) error {
+func (p *Presenter) UpdateAvailable(current, latest string, instructions []string) error {
 	if !p.UpdateNotifications() {
 		return nil
 	}
 	p.StopProgress()
 	text := fmt.Sprintf("%s %s -> %s\n", p.heading("Update available:"), Text(strings.TrimPrefix(current, "v")), Text(latest)) +
-		"https://github.com/lettermint/lettermint-cli/releases/tag/v" + Text(latest) + "\n" +
-		"Installation guide: https://github.com/lettermint/lettermint-cli/blob/main/docs/installation.md\n"
+		"https://github.com/lettermint/lettermint-cli/releases/tag/v" + Text(latest) + "\n"
+	for _, line := range instructions {
+		text += Text(line) + "\n"
+	}
+	text += "Installation guide: https://github.com/lettermint/lettermint-cli/blob/main/docs/installation.md\n"
 	return p.write(p.err, p.diagnostic, text)
 }
 

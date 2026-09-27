@@ -97,6 +97,7 @@ func TestFreshUpdateFollowsSuccessfulOutput(t *testing.T) {
 	}
 	want := "Update available: 1.0.0 -> 1.2.0\n" +
 		"https://github.com/lettermint/lettermint-cli/releases/tag/v1.2.0\n" +
+		strings.Join(update.Instructions(a.version, "1.2.0"), "\n") + "\n" +
 		"Installation guide: https://github.com/lettermint/lettermint-cli/blob/main/docs/installation.md\n"
 	if out.String() != "result\n" || diagnostic.String() != want || requests.Load() != 1 {
 		t.Fatalf("stdout=%q stderr=%q requests=%d", out.String(), diagnostic.String(), requests.Load())
