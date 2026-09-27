@@ -31,7 +31,8 @@ Signing is required for a release. Set these values in the `release` environment
 | Secret | `MACOS_NOTARY_ISSUER_ID` | App Store Connect issuer ID |
 | Secret | `MACOS_NOTARY_KEY_ID` | App Store Connect key ID |
 | Secret | `MACOS_NOTARY_KEY` | Base64 App Store Connect private key |
-| Secret | `HOMEBREW_TAP_TOKEN` | Token restricted to the Homebrew tap |
+| Variable | `LETTERMINT_RELEASE_APP_ID` | Release app ID: `5003223` |
+| Secret | `LETTERMINT_RELEASE_APP_PRIVATE_KEY` | Separate private key for the release app |
 
 The signing steps receive the signing secrets. Apple settings, submission, and wait steps receive the notarization credentials. Other steps use only public publisher identifiers. Never include a client secret in the executable. The workflow stops if a required setting is missing. Windows signing uses Azure Artifact Signing with OIDC. Configure the Azure application's federated credential with issuer `https://token.actions.githubusercontent.com`, subject `repo:lettermint/lettermint-cli:environment:release`, and audience `api://AzureADTokenExchange`. Assign the Artifact Signing Certificate Profile Signer role at the selected certificate profile. Its verified publisher must be `Lettermint B.V.`. GitHub does not store a Windows private key or Azure client secret.
 
@@ -45,7 +46,9 @@ Each Apple wait has a 60-minute limit. The job has a 75-minute limit to allow ti
 
 The workflow copies `scripts/install.sh` into the release assets and sets its public Apple team ID from `MACOS_SIGN_TEAM_ID` before it calculates checksums. Keep the placeholder in the source file. The released file uses LF line endings, including when the build runs on Windows. Its checksum and build provenance are included with the release. The shell script checks the downloaded macOS executable's signature; the script itself has no Authenticode signature.
 
-Create `lettermint/homebrew-tap` with `main` as its default branch. Give `HOMEBREW_TAP_TOKEN` access only to that repository, with Contents and Pull requests write permissions. Do not use a token with access to other private repositories. Require the tap's cask checks and manual review before merge.
+Install the Lettermint Release Bot on `lettermint/homebrew-tap`, with Contents and Pull requests write permissions. Keep `main` as the default branch. Enable automatic squash merges. Require `check (macos-15)` and `check (macos-15-intel)`, and require the branch to be current before merge. Keep the required approval count at zero. The bot does not need a branch protection bypass.
+
+The Homebrew job creates a short-lived app token restricted to `homebrew-tap`. It uses that token for tap API calls and the automatic merge request. Homebrew checks use the normal job token through `HOMEBREW_GITHUB_API_TOKEN`. The app token is revoked when the job ends. Keep the existing `HOMEBREW_TAP_TOKEN` secret during the transition so older release workflows remain retryable. New workflows do not use it.
 
 ## Publish a version
 
@@ -55,7 +58,7 @@ Create `lettermint/homebrew-tap` with `main` as its default branch. Give `HOMEBR
 4. Monitor the Release workflow. It checks the exact tag and runs CI. GoReleaser then builds, signs, and packages without publishing. The workflow scans, saves, and checks the packages on all six native platforms. It then submits the macOS executables to Apple and waits for acceptance before the final macOS installer checks.
 5. Check that all jobs pass. The workflow checks signatures, expected publishers, notarization, version output, installation, replacement, removal, Unicode paths, and both PowerShell versions. It then generates and verifies build provenance.
 6. Download and verify the release files. Only six archives, `install.sh`, the signed `install.ps1` and `uninstall.ps1`, `checksums.txt`, and `provenance.jsonl` are attached. Checksums cover all archives and scripts. Provenance covers those files and the checksum file. Build directories and signing material are never release assets.
-7. For the newest stable release, review the automatic cask PR in `lettermint/homebrew-tap`. The workflow checks cask style, online audit, installation, replacement, and removal before it opens the PR. Tap CI checks both Mac architectures and rejects an older version. Merge manually after the checks pass. Pre-releases do not update the tap.
+7. For the newest stable release, monitor the cask PR in `lettermint/homebrew-tap`. The workflow checks cask style, online audit, installation, replacement, and removal before it opens the PR. It verifies that the PR changes only the expected cask, then requests an automatic squash merge for that commit. Tap CI checks both Mac architectures and rejects an older version. GitHub merges the PR after all required checks pass. Pre-releases do not update the tap.
 
 Use a pre-release to test the complete signed process before the first stable release. Test a failed upload and retry. Confirm that the saved files are reused and that the release notes stay unchanged. Also check installation and upgrade from a prior signed version when one exists. First-release CI uses the new package to test replacement and downgrade protection; it cannot test compatibility with a prior signed release that does not yet exist.
 
@@ -71,7 +74,7 @@ If an upload starts but its submission record is lost, the retry stops. The work
 
 Uploads add only missing files. Each existing asset must have exactly the same bytes as the saved file. A different file, an expired saved artifact, or missing saved packages when public assets already exist stops the workflow. Do not delete artifacts, move the tag, or replace assets to bypass this check. Use a new version if the original files cannot be recovered. A failure before any packages were saved can restart the build.
 
-A failed cask PR step does not remove published CLI assets. Fix the tap token or tap check, then retry that job. A retry for an older release does not downgrade the stable cask.
+A failed cask PR step does not remove published CLI assets. Fix the app credentials, permissions, or tap check, then retry that job. A retry uses an existing release PR and requests automatic merge again. A different cask or changes to other files stop the merge request. A retry for an older release does not downgrade the stable cask.
 
 ## Check saved release packages
 
