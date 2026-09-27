@@ -52,11 +52,10 @@ lettermint messages send \
   --from "Orders <orders@example.com>" \
   --to recipient@example.net \
   --subject "Your order is confirmed" \
-  --text "We received your order and will notify you when it ships." \
-  --idempotency-key order-1042-confirmation
+  --text "We received your order and will notify you when it ships."
 ```
 
-The command uses your saved project. **Accepted** means the message is queued for processing; it does not confirm delivery. Use a new idempotency key for each new message. After a timeout or uncertain response, retry with the same key and exact input.
+The command uses your saved project. **Accepted** means the message is queued for processing; it does not confirm delivery. `--idempotency-key` is optional. Without a key, each command sends a new message. For duplicate protection, supply a key on the first attempt and reuse it with the same project, route, and exact input after an uncertain result.
 
 Inspect the result with the returned message ID:
 
@@ -65,7 +64,7 @@ lettermint messages get MESSAGE_ID
 lettermint messages events MESSAGE_ID
 ```
 
-Use `--profile`, `--project`, or `--route` to override saved defaults for one command. See the [message guide](skills/lettermint-cli/references/messages.md) for JSON input, HTML, attachments, and content exports.
+Message lookup uses the selected profile and ignores saved project and route defaults. Add `--project` to restrict a lookup to that project. Sends and lists still use saved defaults, which you can override with `--project` and `--route`. See the [message guide](skills/lettermint-cli/references/messages.md) for JSON input, HTML, attachments, and content exports.
 
 ### Switch teams
 

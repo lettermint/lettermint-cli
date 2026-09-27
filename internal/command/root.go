@@ -37,8 +37,8 @@ func newWithStore(version, clientID string, store *config.Store) *cobra.Command 
 	a := &app{version: version, clientID: clientID, store: store}
 	root := &cobra.Command{Use: "lettermint", Short: "Send email and develop with Lettermint", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().StringVar(&a.profile, "profile", "", "Saved profile")
-	root.PersistentFlags().StringVar(&a.project, "project", "", "Project ID; overrides the profile default")
-	root.PersistentFlags().StringVar(&a.route, "route", "", "Route ID; overrides the profile default")
+	root.PersistentFlags().StringVar(&a.project, "project", "", "Project ID; overrides the profile default; message lookup uses no default")
+	root.PersistentFlags().StringVar(&a.route, "route", "", "Route ID; overrides the profile default; ignored for message lookup")
 	root.PersistentFlags().BoolVar(&a.display.JSON, "json", false, "Write JSON; listeners write newline-delimited JSON (automatic in pipes)")
 	root.PersistentFlags().BoolVar(&a.display.Plain, "plain", false, "Write readable text without color, banners, or animation")
 	root.PersistentFlags().StringVar(&a.display.Color, "color", "auto", "Human output color: auto, always, or never")
@@ -80,6 +80,13 @@ func (a *app) client(c *cobra.Command) (*api.Client, config.Profile, string, err
 	}
 	if c.Flags().Changed("route") || c.InheritedFlags().Changed("route") {
 		p.Route = a.route
+	}
+	switch c.CommandPath() {
+	case "lettermint messages get", "lettermint messages events", "lettermint messages content":
+		if !c.Flags().Changed("project") && !c.InheritedFlags().Changed("project") {
+			p.Project = ""
+		}
+		p.Route = ""
 	}
 	h := api.Transport()
 	a.scope = presentation.Context{Profile: name, Project: p.Project, Route: p.Route}
@@ -208,7 +215,7 @@ func (a *app) resource(parent *cobra.Command, group, action string) {
 			path = "/v1/projects/" + url.PathEscape(p.Project) + "/routes"
 			query = url.Values{}
 		}
-		if group == "messages" && p.Project == "" {
+		if group == "messages" && action == "list" && p.Project == "" {
 			return errors.New("select a project with --project or context set")
 		}
 		if group == "projects" || group == "listeners" {
@@ -303,6 +310,9 @@ func (a *app) sendCommand(parent *cobra.Command) {
 	var file, key, from, subject, html, text, headers, metadata, attachments, tags, settings string
 	var to, cc, bcc, reply []string
 	cmd := &cobra.Command{Use: "send", Short: "Send one message; an accepted response does not confirm delivery", Args: cobra.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
+		if c.Flags().Changed("idempotency-key") && (len(key) == 0 || len(key) > 255) {
+			return errors.New("--idempotency-key must contain 1 to 255 bytes")
+		}
 		fields := []string{"from", "to", "cc", "bcc", "reply-to", "subject", "html", "text", "headers", "metadata", "attachments", "tags", "settings"}
 		if file != "" {
 			for _, field := range fields {
@@ -369,14 +379,13 @@ func (a *app) sendCommand(parent *cobra.Command) {
 		}
 		b, err := client.Send(c.Context(), p.Project, key, message)
 		if err != nil {
-			return err
+			return &api.SendError{Err: err, HasIdempotencyKey: key != ""}
 		}
 		return a.output(c, b)
 	}}
 	f := cmd.Flags()
 	f.StringVar(&file, "file", "", "JSON message file; use - for standard input")
-	f.StringVar(&key, "idempotency-key", "", "Stable key; reuse it with the same input after an uncertain response")
-	_ = cmd.MarkFlagRequired("idempotency-key")
+	f.StringVar(&key, "idempotency-key", "", "Optional key (1 to 255 bytes); reuse it with the same input after an uncertain response")
 	for _, v := range []struct {
 		target     *string
 		name, help string
@@ -399,11 +408,11 @@ func (a *app) contentCommand(parent *cobra.Command) {
 		if err != nil {
 			return err
 		}
-		if p.Project == "" {
-			return errors.New("select a project")
-		}
 		endpoint := format
-		query := url.Values{"filter[project]": {p.Project}}
+		query := url.Values{}
+		if p.Project != "" {
+			query.Set("filter[project]", p.Project)
+		}
 		if format == "raw" {
 			endpoint = "source"
 			query.Set("format", "stored")

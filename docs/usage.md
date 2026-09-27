@@ -16,7 +16,7 @@ The welcome banner appears on bare `lettermint`, top-level help, and interactive
 
 ## Profiles and login recovery
 
-Each profile contains a login for one user and one team. Use `--profile` to select it. Use `--project` and `--route` to replace saved defaults for one command. Changing the project clears an old route default.
+Each profile contains a login for one user and one team. Use `--profile` to select it. Use `--project` and `--route` to replace saved defaults for one command. Changing the project clears an old route default. For `messages get`, `events`, and `content`, saved project and route defaults do not apply. These commands find the message by ID within the selected profile. An explicit `--project` restricts the lookup; `--route` does not apply.
 
 Normal logout revokes server access and removes the saved login:
 
@@ -53,7 +53,7 @@ A new project has a transactional route and SMTP disabled by default. Set `initi
 
 Single-message fields include `from`, `to`, `cc`, `bcc`, `reply_to`, `subject`, `html`, `text`, `headers`, `metadata`, `tags`, `settings`, and `attachments`. Metadata values are strings. A tag has `name` and `value`. An attachment has `filename` and base64 `content`, with optional `content_type` and `content_id`.
 
-Use the same `--idempotency-key` and exact input after an uncertain send result. An accepted message is queued for processing; it is not proof of delivery. Scheduling and batch sends are outside v1.
+`--idempotency-key` is optional. If supplied, it must contain 1 to 255 bytes. Without a key, each command sends a new message. For duplicate protection, supply a key on the first attempt and reuse it with the same profile, project, route, and exact input after an uncertain result. The CLI does not generate keys or retry sends automatically. An accepted message is queued for processing; it is not proof of delivery. Scheduling and batch sends are outside v1.
 
 ## Lists and content
 
@@ -61,7 +61,7 @@ Use the same `--idempotency-key` and exact input after an uncertain send result.
 
 ```sh
 lettermint messages list --profile work --project PROJECT_ID --limit 20 --json
-lettermint messages content MESSAGE_ID --profile work --project PROJECT_ID --format text --output message.txt
+lettermint messages content MESSAGE_ID --profile work --format text --output message.txt
 ```
 
 Content export supports `raw`, `html`, and `text`. Raw export preserves the original JSON or MIME source. Content access is checked separately from message-list access.
@@ -76,6 +76,6 @@ Human mode shows the error, field validation messages, and a relevant next step 
 {"error":{"code":"validation_failed","message":"validation_failed: The input is invalid.","details":{"from":["The sender address is invalid."]}}}
 ```
 
-Exit codes are 1 for local failures, 2 for API validation errors, 3 for authentication, 4 for permission, 5 for a missing resource, 6 for conflict or expired state, 7 for rate limits, 8 for other API failures, and 130 for cancellation. Use the error code and details to decide the next action. Do not retry a send with a new idempotency key after an uncertain result.
+Exit codes are 1 for local failures, 2 for API validation errors, 3 for authentication, 4 for permission, 5 for a missing resource, 6 for conflict or expired state, 7 for rate limits, 8 for other API failures, and 130 for cancellation. Use the error code and details to decide the next action. After an uncertain send with a key, reuse that key and the exact input. If the send had no key, check the message list before sending again. Another send can create a duplicate, even if you add a key to the retry.
 
 See the [message workflows](../skills/lettermint-cli/references/messages.md) and [webhook workflows](../skills/lettermint-cli/references/webhooks.md) for more examples.

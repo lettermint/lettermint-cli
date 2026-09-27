@@ -158,9 +158,9 @@ func commandExample(key string) string {
 	case "context show":
 		return "lettermint context show --profile work"
 	case "messages send":
-		return "lettermint messages send --profile work --project PROJECT_ID --file message.json --idempotency-key order-1042"
+		return "lettermint messages send --profile work --project PROJECT_ID --file message.json"
 	case "messages content":
-		return "lettermint messages content MESSAGE_ID --project PROJECT_ID --format text --output message.txt"
+		return "lettermint messages content MESSAGE_ID --profile work --format text --output message.txt"
 	case "webhooks listen":
 		return "lettermint webhooks listen --project PROJECT_ID --forward-to http://localhost:3000/webhooks/lettermint"
 	case "listeners replay":
@@ -178,7 +178,7 @@ func commandExample(key string) string {
 	}
 	base := "lettermint " + key
 	context := " --profile work"
-	if parts[0] == "messages" || parts[0] == "routes" {
+	if (parts[0] == "messages" && parts[1] == "list") || parts[0] == "routes" {
 		context += " --project PROJECT_ID"
 	}
 	switch parts[1] {

@@ -62,7 +62,11 @@ func (c *Client) Send(ctx context.Context, project, key string, input SendInput)
 	}
 	wire := input
 	wire.RouteID = ""
-	raw, err := c.Do(ctx, http.MethodPost, "/v1/send", query, wire, http.Header{"Idempotency-Key": {key}})
+	headers := http.Header{}
+	if key != "" {
+		headers.Set("Idempotency-Key", key)
+	}
+	raw, err := c.Do(ctx, http.MethodPost, "/v1/send", query, wire, headers)
 	if err != nil {
 		return Response[SendResult]{}, err
 	}

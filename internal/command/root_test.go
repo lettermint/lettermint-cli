@@ -140,7 +140,7 @@ func TestSharedResourceContract(t *testing.T) {
 		{"domain assign", []string{"domains", "assign", "domain-one", "--file", "-", "--yes"}, `{"project_ids":["project-one"]}`, "PUT", "/v1/domains/domain-one/projects", map[string]string{"filter[project]": "project-one"}, map[string]any{"project_ids": []any{"project-one"}}},
 		{"project defaults", []string{"projects", "create", "--file", "-"}, `{"name":"New project"}`, "POST", "/v1/projects", nil, map[string]any{"name": "New project", "smtp_enabled": false, "initial_routes": "transactional"}},
 		{"project explicit options", []string{"projects", "create", "--file", "-"}, `{"name":"New project","smtp_enabled":true,"initial_routes":"both"}`, "POST", "/v1/projects", nil, map[string]any{"name": "New project", "smtp_enabled": true, "initial_routes": "both"}},
-		{"message events", []string{"messages", "events", "message-one", "--limit", "2"}, "", "GET", "/v1/messages/message-one/events", map[string]string{"filter[project]": "project-one", "filter[route_id]": "route-one", "page[size]": "2"}, nil},
+		{"message events", []string{"messages", "events", "message-one", "--limit", "2"}, "", "GET", "/v1/messages/message-one/events", map[string]string{"page[size]": "2"}, nil},
 		{"listener list", []string{"listeners", "list", "--limit", "2"}, "", "GET", "/v1/listeners", map[string]string{"limit": "2"}, nil},
 	}
 	for _, tc := range cases {
@@ -214,7 +214,7 @@ func TestContentUsesExistingEndpointsWithoutChangingBytes(t *testing.T) {
 						t.Error("missing exact source format")
 					}
 				}
-				if r.URL.Path != "/v1/messages/message-one/"+endpoint || r.URL.Query().Get("filter[project]") != "project-one" {
+				if r.URL.Path != "/v1/messages/message-one/"+endpoint || r.URL.Query().Has("filter[project]") {
 					t.Errorf("wrong content request: %s", r.URL)
 				}
 				w.Write(content)
