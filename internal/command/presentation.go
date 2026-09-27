@@ -8,6 +8,7 @@ import (
 
 	"github.com/lettermint/lettermint-cli/internal/api"
 	"github.com/lettermint/lettermint-cli/internal/presentation"
+	"github.com/lettermint/lettermint-cli/internal/update"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -128,12 +129,22 @@ func (a *app) configurePresentation(root *cobra.Command) {
 		if original := c.RunE; original != nil {
 			c.RunE = func(cmd *cobra.Command, args []string) error {
 				ui := a.ui(cmd)
+				check := a.checkUpdate(cmd, key)
+				defer check.Stop()
+				if check != nil && check.Cached != "" {
+					_ = ui.UpdateAvailable(a.version, check.Cached)
+				}
 				// These commands produce raw bytes or help and must stay undecorated.
 				if key != "messages content" && !strings.HasPrefix(key, "completion") && key != "version" && cmd != root {
 					ui.StartProgress(cmd.Context(), "Running "+key)
 				}
 				defer ui.StopProgress()
-				return original(cmd, args)
+				err := original(cmd, args)
+				ui.StopProgress()
+				if latest := check.Finish(err == nil && key != "webhooks listen"); latest != "" {
+					_ = ui.UpdateAvailable(a.version, latest)
+				}
+				return err
 			}
 		}
 		for _, child := range c.Commands() {
@@ -141,6 +152,17 @@ func (a *app) configurePresentation(root *cobra.Command) {
 		}
 	}
 	wrap(root)
+}
+
+func (a *app) checkUpdate(c *cobra.Command, key string) *update.Check {
+	if a.noInput || !a.ui(c).UpdateNotifications() || c == c.Root() ||
+		key == "version" || key == "messages content" || strings.HasPrefix(key, "completion") {
+		return nil
+	}
+	if a.updates == nil {
+		a.updates = update.New()
+	}
+	return a.updates.Start(c.Context(), a.version)
 }
 
 func commandExample(key string) string {
