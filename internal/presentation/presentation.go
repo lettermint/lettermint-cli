@@ -221,15 +221,23 @@ func (p *Presenter) Error(err error) error {
 	case 5:
 		hint = "Check the resource ID and the selected project."
 	case 7:
-		hint = "Retry later. For a send, keep the same input and idempotency key."
+		hint = "Retry later."
 	case 8:
-		hint = "For an uncertain send result, keep the same input and idempotency key."
+		hint = "Check the service status before you retry."
 	case 1:
 		hint = "Use the command's --help to check its arguments."
 	}
 	var network net.Error
 	if errors.As(err, &network) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
-		hint = "Check the connection and retry later. For an uncertain send, keep the same input and idempotency key."
+		hint = "Check the connection before you retry."
+	}
+	var send *api.SendError
+	if errors.As(err, &send) && (api.ExitCode(err) == 1 || api.ExitCode(err) == 7 || api.ExitCode(err) == 8) {
+		if send.HasIdempotencyKey {
+			hint = "For an uncertain send result, retry with the same profile, project, route, input, and idempotency key."
+		} else {
+			hint = "This send did not use an idempotency key. Check the message list before you retry; another send can create a duplicate."
+		}
 	}
 	if hint != "" {
 		fmt.Fprintf(&b, "\n%s\n", hint)

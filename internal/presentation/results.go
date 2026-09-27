@@ -101,7 +101,11 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 		case "messages send":
 			b.WriteString("\nAccepted for processing. Delivery is not yet confirmed.\n")
 			if m, ok := data.(map[string]any); ok {
-				fmt.Fprintf(&b, "Check delivery with: lettermint messages events %s\n", scalar(m["message_id"]))
+				fmt.Fprintf(&b, "Check delivery with: lettermint messages events %s", scalar(m["message_id"]))
+				if scope.Profile != "" {
+					fmt.Fprintf(&b, " --profile %s", Text(scope.Profile))
+				}
+				b.WriteByte('\n')
 			}
 		case "auth logout":
 			if revoked, ok := root["revoked"].(bool); ok && !revoked {
