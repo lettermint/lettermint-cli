@@ -11,6 +11,7 @@ import (
 	"github.com/lettermint/lettermint-cli/internal/config"
 	"github.com/lettermint/lettermint-cli/internal/listener"
 	"github.com/lettermint/lettermint-cli/internal/presentation"
+	"github.com/lettermint/lettermint-cli/internal/update"
 	"github.com/lettermint/lettermint-cli/skills"
 	"github.com/spf13/cobra"
 	"io"
@@ -27,6 +28,7 @@ type app struct {
 	display                 presentation.Options
 	presenter               *presentation.Presenter
 	scope                   presentation.Context
+	updates                 *update.Checker
 }
 
 func New(version, clientID string) *cobra.Command {
