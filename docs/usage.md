@@ -64,6 +64,8 @@ lettermint messages list --profile work --project PROJECT_ID --limit 20 --json
 lettermint messages content MESSAGE_ID --profile work --format text --output message.txt
 ```
 
+`webhooks deliveries` has no `--limit`; the API uses a fixed page size. Use `--cursor` the same way.
+
 Content export supports `raw`, `html`, and `text`. Raw export preserves the original JSON or MIME source. Content access is checked separately from message-list access.
 
 File export keeps the requested destination absent until the download succeeds. It does not replace an existing file. The output directory must support hard links; otherwise the command returns an error without creating a partial output. Standard output is streamed and cannot be rolled back after a failure. On PowerShell, use `--output` for exact bytes instead of shell redirection.
@@ -77,6 +79,20 @@ lettermint messages resend MESSAGE_ID --profile work --recipient reader@example.
 ```
 
 The new message uses the current settings of the original route and project and counts towards usage. A message can be resent while its content is retained, at most 5 times in 24 hours. `--idempotency-key` works as it does for a send. Check delivery with the events of the new message ID.
+
+## Webhook deliveries and secrets
+
+Delivery commands find the webhook by ID within the selected profile. Saved project and route defaults do not apply.
+
+```sh
+lettermint webhooks deliveries WEBHOOK_ID --profile work --status failed,timeout --from 2026-09-01 --json
+lettermint webhooks delivery WEBHOOK_ID DELIVERY_ID --profile work --json
+lettermint webhooks retry WEBHOOK_ID DELIVERY_ID --profile work --json
+```
+
+Filter deliveries by `--status`, `--event`, `--from`, and `--to`. Statuses are `pending`, `success`, `failed`, `client_error`, `server_error`, and `timeout`. Dates use `YYYY-MM-DD`. A delivery shows its payload, response, and error only with content access. A retry sends the original payload to the webhook again and needs webhook management and content access. A delivery about a message kept 7 days or less cannot be retried, and a disabled webhook cannot retry. These cases return a conflict.
+
+`webhooks regenerate-secret` replaces the signing secret. The old secret stops working immediately. The command asks for confirmation; in an approved script, use `--yes --no-input`. The result shows the new secret once. `webhooks create` also shows the secret only once.
 
 ## Errors
 

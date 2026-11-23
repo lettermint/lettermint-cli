@@ -180,6 +180,7 @@ func (a *app) resourceCommands(root *cobra.Command) {
 		}
 		if group == "webhooks" {
 			a.listenCommand(parent)
+			a.webhookCommands(parent)
 		}
 	}
 }
