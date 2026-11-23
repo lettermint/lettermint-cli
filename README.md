@@ -64,6 +64,8 @@ lettermint messages get MESSAGE_ID
 lettermint messages events MESSAGE_ID
 ```
 
+To send a message again, run `lettermint messages resend MESSAGE_ID`. It asks for confirmation and creates a new message with its own ID.
+
 Message lookup uses the selected profile and ignores saved project and route defaults. Add `--project` to restrict a lookup to that project. Sends and lists still use saved defaults, which you can override with `--project` and `--route`. See the [message guide](skills/lettermint-cli/references/messages.md) for JSON input, HTML, attachments, and content exports.
 
 ### Switch teams
@@ -130,7 +132,7 @@ See the [usage guide](docs/usage.md) for output options, JSON input, pagination,
 | `auth` | Log in, check access, or revoke a login and its listeners |
 | `profiles` | List and select saved logins |
 | `context` | Show or set project and route defaults |
-| `messages` | Send email, inspect messages and events, or export content |
+| `messages` | Send or resend email, inspect messages and events, or export content |
 | `projects` | List, inspect, and create projects |
 | `routes` | Manage routes and verify inbound domains |
 | `domains` | Add, verify, and assign sending domains |

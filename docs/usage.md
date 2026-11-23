@@ -16,7 +16,7 @@ The welcome banner appears on bare `lettermint`, top-level help, and interactive
 
 ## Profiles and login recovery
 
-Each profile contains a login for one user and one team. Use `--profile` to select it. Use `--project` and `--route` to replace saved defaults for one command. Changing the project clears an old route default. For `messages get`, `events`, and `content`, saved project and route defaults do not apply. These commands find the message by ID within the selected profile. An explicit `--project` restricts the lookup; `--route` does not apply.
+Each profile contains a login for one user and one team. Use `--profile` to select it. Use `--project` and `--route` to replace saved defaults for one command. Changing the project clears an old route default. For `messages get`, `events`, `content`, and `resend`, saved project and route defaults do not apply. These commands find the message by ID within the selected profile. An explicit `--project` restricts the lookup; `--route` does not apply.
 
 Normal logout revokes server access and removes the saved login:
 
@@ -67,6 +67,16 @@ lettermint messages content MESSAGE_ID --profile work --format text --output mes
 Content export supports `raw`, `html`, and `text`. Raw export preserves the original JSON or MIME source. Content access is checked separately from message-list access.
 
 File export keeps the requested destination absent until the download succeeds. It does not replace an existing file. The output directory must support hard links; otherwise the command returns an error without creating a partial output. Standard output is streamed and cannot be rolled back after a failure. On PowerShell, use `--output` for exact bytes instead of shell redirection.
+
+## Resend
+
+`messages resend` sends the stored content of a message again as a new message with its own ID. It asks for confirmation; in an approved script, use `--yes --no-input`. Without `--recipient`, every original recipient receives the message again. Repeat `--recipient` to select some of the original recipients. The original To and Cc headers stay unchanged.
+
+```sh
+lettermint messages resend MESSAGE_ID --profile work --recipient reader@example.net
+```
+
+The new message uses the current settings of the original route and project and counts towards usage. A message can be resent while its content is retained, at most 5 times in 24 hours. `--idempotency-key` works as it does for a send. Check delivery with the events of the new message ID.
 
 ## Errors
 

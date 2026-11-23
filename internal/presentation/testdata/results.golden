@@ -204,6 +204,15 @@ Status: accepted
 Accepted for processing. Delivery is not yet confirmed.
 Check delivery with: lettermint messages events msg_01
 
+>>> messages resend
+Resend accepted
+
+Message ID: msg_02
+Status: pending
+
+Accepted for processing. Delivery is not yet confirmed.
+Check delivery with: lettermint messages events msg_02
+
 >>> projects create
 Project created
 

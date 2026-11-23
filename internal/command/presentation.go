@@ -183,6 +183,8 @@ func commandExample(key string) string {
 		return "lettermint messages send --profile work --project PROJECT_ID --file message.json"
 	case "messages content":
 		return "lettermint messages content MESSAGE_ID --profile work --format text --output message.txt"
+	case "messages resend":
+		return "lettermint messages resend MESSAGE_ID --profile work"
 	case "webhooks listen":
 		return "lettermint webhooks listen --project PROJECT_ID --forward-to http://localhost:3000/webhooks/lettermint"
 	case "listeners replay":
