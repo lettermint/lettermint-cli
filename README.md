@@ -85,6 +85,17 @@ lettermint profiles use work
 
 Each profile keeps its own project and route defaults. Use `--profile team-b` to select a different profile for one command.
 
+## Analytics
+
+Query metrics for your saved project. Analytics requires the Pro plan:
+
+```sh
+lettermint analytics --metric delivered,bounced,bounce_rate --from 2026-11-01 --to 2026-11-07
+lettermint analytics --metric delivered,deferral_rate --group-by provider_family --sort deferral_rate
+```
+
+Without `--from` and `--to`, the window is the last 30 days. See the [analytics guide](skills/lettermint-cli/references/analytics.md) for time series, filters, comparisons, and JSON queries.
+
 ## Local webhooks
 
 Start your local webhook handler, then forward events to it:
@@ -115,7 +126,7 @@ Agents and scripts must use `--json --no-input` and select the intended profile 
 lettermint messages list --profile work --project PROJECT_ID --json --no-input
 ```
 
-The CLI includes an [agent skill](skills/lettermint-cli/SKILL.md) for sending, message inspection, and local webhooks. Export the skill that matches your installed version:
+The CLI includes an [agent skill](skills/lettermint-cli/SKILL.md) for sending, message inspection, analytics, and local webhooks. Export the skill that matches your installed version:
 
 ```sh
 lettermint skills export --output ./lettermint-skills --json --no-input
@@ -136,6 +147,7 @@ See the [usage guide](docs/usage.md) for output options, JSON input, pagination,
 | `projects` | List, inspect, and create projects |
 | `routes` | Manage routes and verify inbound domains |
 | `domains` | Add, verify, and assign sending domains |
+| `analytics` | Query delivery, engagement, and latency metrics |
 | `webhooks` | Manage webhook endpoints or forward events locally |
 | `listeners` | Inspect, stop, and replay listener sessions or get their secrets |
 | `skills` | List and export the included agent skills |

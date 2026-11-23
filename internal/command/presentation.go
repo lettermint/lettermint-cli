@@ -105,7 +105,7 @@ func (a *app) configurePresentation(root *cobra.Command) {
 	})
 	groups := map[string]string{
 		"auth": "setup", "profiles": "setup", "context": "setup",
-		"messages": "email", "projects": "email", "routes": "email", "domains": "email",
+		"messages": "email", "projects": "email", "routes": "email", "domains": "email", "analytics": "email",
 		"webhooks": "webhooks", "listeners": "webhooks",
 		"skills": "utilities", "doctor": "utilities", "completion": "utilities", "version": "utilities",
 	}

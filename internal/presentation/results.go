@@ -73,6 +73,10 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
+	if command == "analytics" {
+		p.analytics(&b, encoded, root)
+		return p.write(p.out, p.output, b.String())
+	}
 	if cols, ok := columns[command]; ok {
 		rows := p.rows(command, root, data)
 		p.list(&b, cols, rows)
