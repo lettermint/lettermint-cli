@@ -22,5 +22,9 @@ func WriteError(w io.Writer, err error) error {
 	if errors.As(err, &remote) && len(remote.Details) > 0 && json.Valid(remote.Details) {
 		body["details"] = remote.Details
 	}
+	var missing *PermissionError
+	if errors.As(err, &missing) {
+		body["required_permissions"] = missing.Permissions
+	}
 	return json.NewEncoder(w).Encode(map[string]any{"error": body})
 }

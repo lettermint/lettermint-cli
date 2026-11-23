@@ -102,6 +102,9 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 				data = selected
 			}
 		}
+		if command == "auth status" {
+			data = groupPermissions(data)
+		}
 		p.fields(&b, data, "", command == "listeners secret" || command == "webhooks regenerate-secret" || command == "webhooks create")
 		switch command {
 		case "messages send", "messages resend":
@@ -411,6 +414,8 @@ func label(key string) string {
 		return "API"
 	case "api_url":
 		return "API URL"
+	case "api_version":
+		return "API version"
 	case "smtp_enabled":
 		return "SMTP enabled"
 	case "dns_records":

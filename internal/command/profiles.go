@@ -93,7 +93,7 @@ func (a *app) authCommands(root *cobra.Command) {
 	login.Flags().StringVar(&clientID, "client-id", a.clientID, "Official public client ID for this environment")
 	login.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the login URL without opening a browser")
 	parent.AddCommand(login)
-	parent.AddCommand(&cobra.Command{Use: "status", Args: cobra.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
+	parent.AddCommand(&cobra.Command{Use: "status", Short: "Show the saved login and its permissions", Args: cobra.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
 		client, _, name, err := a.client(c)
 		if err != nil {
 			return err
@@ -102,7 +102,15 @@ func (a *app) authCommands(root *cobra.Command) {
 		if err != nil {
 			return err
 		}
-		return a.output(c, map[string]any{"profile": name, "identity": identity.Data})
+		result := map[string]any{"profile": name, "identity": identity.Data}
+		permissions, err := loginPermissions(c.Context(), client)
+		if err != nil {
+			return err
+		}
+		if permissions != nil {
+			result["permissions"] = permissions
+		}
+		return a.output(c, result)
 	}})
 	var local bool
 	logout := &cobra.Command{Use: "logout", Short: "Revoke this grant and its listeners", Args: cobra.NoArgs, RunE: func(c *cobra.Command, _ []string) error {

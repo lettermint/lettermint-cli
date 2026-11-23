@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Show login permissions in `auth status`, check the API version in `doctor`, and name the required permissions in permission errors.
 - Make send idempotency keys optional and inspect messages by ID without saved project filters. Include the send profile in the delivery command.
 - Add a macOS and Linux shell installer to release assets and document website download links.
 - Add a branded terminal welcome, readable tables, action results, and local webhook status lines.

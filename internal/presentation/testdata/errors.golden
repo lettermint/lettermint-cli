@@ -6,3 +6,6 @@ Error: validation_failed: Invalid input
 Error: permission_denied: Access denied
 
 This profile does not have permission for this operation. Stop here and check its assigned access.
+Error: permission_denied: Access denied
+
+This profile does not have permission for this operation. It needs messages:read, messages:read_content. Stop here and check its permissions with auth status.

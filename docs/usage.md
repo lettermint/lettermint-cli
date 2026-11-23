@@ -35,6 +35,16 @@ Local logout asks for confirmation. In an approved script, use `--local --yes --
 
 A server failure or rate limit does not remove saved credentials. Retry later. A permission error is not a reason to switch to another account or request broader access.
 
+## Permissions
+
+`auth status` shows the team permissions of the saved login, such as `projects:read` and `messages:send`. The JSON result lists them under `permissions`. The field is absent if the server does not report permissions.
+
+```sh
+lettermint auth status --profile work
+```
+
+`doctor` checks the API version and counts the permissions under `capabilities`. It shows a warning if this CLI does not support the API version; update the CLI. A server without permission reporting shows `not available`.
+
 ## JSON input
 
 Resource create and update commands use `--file input.json`. Use `--file -` to read one JSON object from standard input. A single-message send accepts either a file or message flags. Do not mix the two input methods.
@@ -116,6 +126,8 @@ Human mode shows the error, field validation messages, and a relevant next step 
 ```json
 {"error":{"code":"validation_failed","message":"validation_failed: The input is invalid.","details":{"from":["The sender address is invalid."]}}}
 ```
+
+When the API denies a command, the error names the permissions the command needs. JSON errors list them under `error.required_permissions`. Compare them with `auth status`. Listener commands list the permissions for all default events.
 
 Exit codes are 1 for local failures, 2 for API validation errors, 3 for authentication, 4 for permission, 5 for a missing resource, 6 for conflict or expired state, 7 for rate limits, 8 for other API failures, and 130 for cancellation. Use the error code and details to decide the next action. After an uncertain send with a key, reuse that key and the exact input. If the send had no key, check the message list before sending again. Another send can create a duplicate, even if you add a key to the retry.
 
