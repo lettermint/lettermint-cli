@@ -236,6 +236,10 @@ func (p *Presenter) Error(err error) error {
 		hint = "Check auth status for this profile. If its login is unusable, use auth logout --local, then auth login."
 	case 4:
 		hint = "This profile does not have permission for this operation. Stop here and check its assigned access."
+		var missing *api.PermissionError
+		if errors.As(err, &missing) {
+			hint = "This profile does not have permission for this operation. It needs " + strings.Join(missing.Permissions, ", ") + ". Stop here and check its permissions with auth status."
+		}
 	case 5:
 		hint = "Check the resource ID and the selected project."
 	case 7:

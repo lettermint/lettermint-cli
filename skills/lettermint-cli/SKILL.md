@@ -7,9 +7,9 @@ description: Use the Lettermint CLI to send and inspect email, query email analy
 
 Run `lettermint version` and `lettermint --help` first. Use only commands listed by the installed release. Read command help before you change data.
 
-Use `lettermint auth status --json` to check the saved grant. If login is required, ask the user to run `lettermint auth login` and approve the correct team in the browser. Do not request a token or read the credential store.
+Use `lettermint auth status --json` to check the saved grant and its `permissions`. If login is required, ask the user to run `lettermint auth login` and approve the correct team in the browser. Do not request a token or read the credential store.
 
-Run `lettermint context show --json`. Set `--profile` and `--project` explicitly for resource calls. A saved grant belongs to one user and one team. Do not select another account or request broader access to work around a permission error.
+Run `lettermint context show --json`. Set `--profile` and `--project` explicitly for resource calls. A saved grant belongs to one user and one team. Do not select another account or request broader access to work around a permission error. A permission error lists `required_permissions`; report them to the user and stop.
 
 Use `--json --no-input` explicitly for agent calls and scripts, even when output goes to a pipe. Normal terminal output contains tables and human status messages; do not parse it. Listener JSON results use one record per line. JSON errors use standard error and retain field validation details. Content exports and completion scripts keep their own formats.
 

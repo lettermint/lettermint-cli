@@ -504,7 +504,16 @@ func (a *app) utilityCommands(root *cobra.Command) {
 		if err != nil {
 			return err
 		}
-		return a.output(c, map[string]any{"version": a.version, "api": "available", "identity": identity.Data})
+		result := map[string]any{"version": a.version, "api": "available", "identity": identity.Data}
+		check, warnings, err := checkCapabilities(c.Context(), client)
+		if err != nil {
+			return err
+		}
+		result["capabilities"] = check
+		if len(warnings) > 0 {
+			result["warnings"] = warnings
+		}
+		return a.output(c, result)
 	}})
 	completion := &cobra.Command{Use: "completion <bash|zsh|fish|powershell>", Short: "Write shell completion", Args: cobra.ExactArgs(1), ValidArgs: []string{"bash", "zsh", "fish", "powershell"}, RunE: func(c *cobra.Command, args []string) error {
 		switch args[0] {

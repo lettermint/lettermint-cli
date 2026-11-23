@@ -139,7 +139,7 @@ func (a *app) configurePresentation(root *cobra.Command) {
 					ui.StartProgress(cmd.Context(), "Running "+key)
 				}
 				defer ui.StopProgress()
-				err := original(cmd, args)
+				err := withPermissions(key, original(cmd, args))
 				ui.StopProgress()
 				if latest := check.Finish(err == nil && key != "webhooks listen"); latest != "" {
 					_ = ui.UpdateAvailable(a.version, latest, update.Instructions(a.version, latest))

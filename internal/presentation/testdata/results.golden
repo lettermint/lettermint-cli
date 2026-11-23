@@ -148,6 +148,27 @@ Identity:
     Email: user@example.com
 Profile: work
 
+>>> auth status
+Login status
+
+Identity:
+  Team:
+    Name: Demo
+Permissions:
+  Messages: read, read_content, send
+  Projects: read, create
+  Team tokens: read
+Profile: work
+
+>>> auth status
+Login status
+
+Identity:
+  Team:
+    Name: Demo
+Permissions: none
+Profile: work
+
 >>> auth login
 Login complete
 
@@ -189,6 +210,32 @@ Profile: work
 Connection check
 
 API: available
+Identity:
+  Team:
+    Name: Demo
+Version: 1.0.0
+
+>>> doctor
+Connection check
+
+API: available
+Capabilities:
+  API version: v2
+  Permission count: 12
+  Status: available
+Identity:
+  Team:
+    Name: Demo
+Version: 1.0.0
+Warnings:
+  - API version v2 is not supported by this CLI, which supports v1. Update the CLI.
+
+>>> doctor
+Connection check
+
+API: available
+Capabilities:
+  Status: not available
 Identity:
   Team:
     Name: Demo

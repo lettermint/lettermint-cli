@@ -39,12 +39,16 @@ func TestHumanResults(t *testing.T) {
 		{"messages get", `{"data":{"id":"msg_01","subject":"Full subject with Unicode: 你好 👩‍💻","to":[{"email":"café@example.net"}],"status":"delivered"}}`},
 		{"listeners get", `{"data":{"id":"session_01","project_id":"proj_01","oauth_connection_id":"private-field","secret":"do-not-display","expires_at":"2026-09-05T00:00:00Z","attempts":[{"sequence":12,"local_status":500}]}}`},
 		{"auth status", `{"profile":"work","identity":{"team":{"name":"Demo","id":"team_01"},"user":{"email":"user@example.com","id":"user_01"}}}`},
+		{"auth status", `{"profile":"work","identity":{"team":{"name":"Demo"}},"permissions":["projects:read","projects:create","messages:read","messages:read_content","messages:send","team_tokens:read"]}`},
+		{"auth status", `{"profile":"work","identity":{"team":{"name":"Demo"}},"permissions":[]}`},
 		{"auth login", `{"profile":"work","identity":{"team":{"name":"Demo"},"user":{"email":"user@example.com"}}}`},
 		{"auth logout", `{"revoked":false,"local_credentials_removed":true}`},
 		{"context show", `{"profile":"work","context":{"project":"proj_01","route":null}}`},
 		{"context set", `{"project":"proj_01","route":"route_01"}`},
 		{"profiles use", `{"profile":"work"}`},
 		{"doctor", `{"version":"1.0.0","api":"available","identity":{"team":{"name":"Demo"}}}`},
+		{"doctor", `{"version":"1.0.0","api":"available","identity":{"team":{"name":"Demo"}},"capabilities":{"status":"available","api_version":"v2","permission_count":12},"warnings":["API version v2 is not supported by this CLI, which supports v1. Update the CLI."]}`},
+		{"doctor", `{"version":"1.0.0","api":"available","identity":{"team":{"name":"Demo"}},"capabilities":{"status":"not available"}}`},
 		{"messages send", `{"data":{"message_id":"msg_01","status":"accepted","idempotent_replay":false}}`},
 		{"messages resend", `{"message_id":"msg_02","status":"pending"}`},
 		{"analytics", `{"data":{"summary":{"metrics":{"delivered":48210,"bounced":312,"bounce_rate":0.006423586090465504,"delivery_latency_p95_ms":1834.5},"rate_bases":{"bounce_rate":{"numerator":312,"denominator":48571}}}},"meta":{"timezone":"UTC","interval":"day","from":"2026-10-13T00:00:00.000000Z","to":"2026-11-12T00:00:00.000000Z","effective_to":"2026-11-11T09:41:07.512000Z","ongoing":true,"partial":false},"pagination":{"total_groups":0,"returned_groups":0,"next_cursor":null,"truncated":false}}`},
@@ -149,6 +153,10 @@ func TestHumanErrorKeepsFieldDetailsAndPermissionBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := p.Error(&api.Error{Status: 403, Code: "permission_denied", Message: "Access denied"}); err != nil {
+		t.Fatal(err)
+	}
+	denied := &api.PermissionError{Err: &api.Error{Status: 403, Code: "permission_denied", Message: "Access denied"}, Permissions: []string{"messages:read", "messages:read_content"}}
+	if err := p.Error(denied); err != nil {
 		t.Fatal(err)
 	}
 	checkGolden(t, "testdata/errors.golden", diagnostics.Bytes())
