@@ -1,4 +1,6 @@
-# Local webhooks
+# Webhooks
+
+## Local forwarding
 
 Start the local HTTP application before you start the listener.
 
@@ -23,3 +25,21 @@ lettermint listeners stop SESSION_ID --profile work --yes --json --no-input
 ```
 
 Replay creates a new ordered attempt with the original bytes and a new signature timestamp. Replay does not extend source retention. Stop on an expired payload or a permission error. Local attempts do not change permanent webhook configuration or inbound processing state.
+
+## Deliveries and secrets
+
+Inspect deliveries of a permanent webhook by ID. Saved project and route defaults do not apply.
+
+```sh
+lettermint webhooks deliveries WEBHOOK_ID --profile work --status failed,timeout --json --no-input
+lettermint webhooks delivery WEBHOOK_ID DELIVERY_ID --profile work --json --no-input
+lettermint webhooks retry WEBHOOK_ID DELIVERY_ID --profile work --json --no-input
+```
+
+Filters are `--status`, `--event`, `--from`, and `--to` (`YYYY-MM-DD`). Delivery pages have a fixed size; continue with `--cursor`. Without content access, a delivery omits `payload`, `response_body`, `response_headers`, and `error_message`. Retry sends the original payload to the customer endpoint again; do it only when the user asks. It needs webhook management and content access. A conflict means the webhook is disabled, the delivery is not retryable or has no retained payload, or a retry is in progress.
+
+```sh
+lettermint webhooks regenerate-secret WEBHOOK_ID --profile work --yes --json --no-input
+```
+
+Regenerate a secret only if the user approved it. The old secret stops working immediately, so the integration rejects deliveries until it uses the new secret. The new secret is in `data.secret` and is shown once. Give it to the user or the application's secret store. Do not print it in a shared log.

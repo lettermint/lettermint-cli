@@ -187,6 +187,12 @@ func commandExample(key string) string {
 		return "lettermint messages resend MESSAGE_ID --profile work"
 	case "webhooks listen":
 		return "lettermint webhooks listen --project PROJECT_ID --forward-to http://localhost:3000/webhooks/lettermint"
+	case "webhooks deliveries":
+		return "lettermint webhooks deliveries WEBHOOK_ID --profile work --status failed"
+	case "webhooks delivery", "webhooks retry":
+		return "lettermint " + key + " WEBHOOK_ID DELIVERY_ID --profile work"
+	case "webhooks regenerate-secret":
+		return "lettermint webhooks regenerate-secret WEBHOOK_ID --profile work"
 	case "listeners replay":
 		return "lettermint listeners replay SESSION_ID --sequence 12 --profile work"
 	case "skills export":

@@ -265,6 +265,55 @@ Listener signing secret
 
 Secret: local-signing-secret
 
+>>> webhooks deliveries
+Webhook deliveries
+
+Created                  Event              Status        Attempt  HTTP  ID         
+2026-09-05 12:00:00 UTC  message.delivered  server_error  2        503   delivery_01
+2026-09-05 11:00:00 UTC  message.sent       success       1        200   delivery_02
+
+2 results shown.
+
+>>> webhooks delivery
+Webhook delivery
+
+ID: delivery_01
+Attempt number: 1
+Error message: Connection refused
+Event type: message.delivered
+HTTP status code: —
+Next retry at: 2026-09-05 12:05:00 UTC
+Payload:
+  Event: message.delivered
+Payload retained: yes
+Response headers: —
+Status: failed
+Timestamp: 2026-09-05 12:00:00 UTC
+Webhook ID: hook_01
+
+>>> webhooks retry
+Delivery retry queued
+
+Delivery ID: delivery_01
+Message: Retry queued.
+
+>>> webhooks regenerate-secret
+Webhook secret regenerated
+
+Name: Orders
+ID: hook_01
+Enabled: yes
+Secret: whsec_new-secret
+
+The old secret no longer works. Update your integration to verify signatures with the new secret.
+
+>>> webhooks create
+Webhook created
+
+Name: Orders
+ID: hook_01
+Secret: whsec_created-secret
+
 >>> skills export
 Skills exported
 

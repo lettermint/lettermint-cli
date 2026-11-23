@@ -33,6 +33,8 @@ var columns = map[string][]column{
 	"listeners list":  {{"ID", "id", true}, {"Project", "project_id", true}, {"State", "state", false}, {"Expiry", "expires_at", true}},
 	"profiles list":   {{"Selected", "selected", false}, {"Name", "name", false}, {"Team", "team_id", true}, {"Project", "project", true}, {"Route", "route", true}},
 	"skills list":     {{"Name", "name", false}, {"Version", "version", true}},
+
+	"webhooks deliveries": {{"Created", "created_at", true}, {"Event", "event_type", false}, {"Status", "status", false}, {"Attempt", "attempt_number", false}, {"HTTP", "http_status_code", false}, {"ID", "id", true}},
 }
 
 func (p *Presenter) Result(command string, value any, scope Context) error {
@@ -96,7 +98,7 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 				data = selected
 			}
 		}
-		p.fields(&b, data, "", command == "listeners secret")
+		p.fields(&b, data, "", command == "listeners secret" || command == "webhooks regenerate-secret" || command == "webhooks create")
 		switch command {
 		case "messages send", "messages resend":
 			b.WriteString("\nAccepted for processing. Delivery is not yet confirmed.\n")
@@ -107,6 +109,8 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 				}
 				b.WriteByte('\n')
 			}
+		case "webhooks regenerate-secret":
+			b.WriteString("\nThe old secret no longer works. Update your integration to verify signatures with the new secret.\n")
 		case "auth logout":
 			if revoked, ok := root["revoked"].(bool); ok && !revoked {
 				b.WriteString("\nServer access can remain active. Revoke it in Applications if needed.\n")
@@ -140,6 +144,14 @@ func resultTitle(command string) string {
 		return "Connection check"
 	case "messages events":
 		return "Message events"
+	case "webhooks regenerate-secret":
+		return "Webhook secret regenerated"
+	case "webhooks deliveries":
+		return "Webhook deliveries"
+	case "webhooks delivery":
+		return "Webhook delivery"
+	case "webhooks retry":
+		return "Delivery retry queued"
 	}
 	parts := strings.Fields(command)
 	if len(parts) == 2 {
@@ -323,9 +335,9 @@ func (p *Presenter) cell(key string, value any) string {
 	if key == "status" || key == "state" || key == "enabled" || key == "is_default" || key == "selected" {
 		style := lipgloss.NewStyle()
 		switch strings.ToLower(text) {
-		case "delivered", "verified", "active", "yes":
+		case "delivered", "verified", "active", "success", "yes":
 			style = style.Foreground(lipgloss.Green)
-		case "failed", "bounced", "rejected", "expired":
+		case "failed", "bounced", "rejected", "expired", "client_error", "server_error", "timeout":
 			style = style.Foreground(lipgloss.Red)
 		case "pending", "accepted", "stopped", "no":
 			style = style.Foreground(lipgloss.Yellow)
@@ -399,6 +411,8 @@ func label(key string) string {
 		return "SMTP enabled"
 	case "dns_records":
 		return "DNS records"
+	case "http_status_code":
+		return "HTTP status code"
 	}
 	if strings.HasSuffix(key, "_id") {
 		return label(strings.TrimSuffix(key, "_id")) + " ID"
