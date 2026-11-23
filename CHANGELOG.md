@@ -2,7 +2,6 @@
 
 ## Unreleased
 
-- Add `messages resend` to send a stored message again to all or some of its original recipients.
 - Make send idempotency keys optional and inspect messages by ID without saved project filters. Include the send profile in the delivery command.
 - Add a macOS and Linux shell installer to release assets and document website download links.
 - Add a branded terminal welcome, readable tables, action results, and local webhook status lines.
