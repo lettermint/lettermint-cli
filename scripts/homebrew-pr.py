@@ -13,6 +13,8 @@ import release
 
 TAP = "lettermint/homebrew-tap"
 CASK = "Casks/lettermint.rb"
+# Homebrew loads casks by name only; a path is skipped or fails.
+CASK_NAME = "lettermint/tap/lettermint"
 
 
 def optional(endpoint):
@@ -80,23 +82,28 @@ def main():
         if cask_version(current_text) >= candidate:
             print("The tap already has this version or a newer version. No update is required.")
             return
+    # Check with current Homebrew: runner images can carry an older version.
+    subprocess.run(["brew", "update", "--quiet"], check=True)
     subprocess.run(["brew", "tap", "lettermint/tap"], check=True)
     tap_path = Path(release.run("brew", "--repository", "lettermint/tap"))
     target = tap_path / CASK
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text)
-    subprocess.run(["brew", "style", "--fix", "--cask", str(target)], check=True)
+    # Homebrew loads casks from third-party taps only after they are trusted.
+    # install trusts a fully qualified name itself; style and audit do not.
+    subprocess.run(["brew", "trust", "--cask", CASK_NAME], check=True)
+    subprocess.run(["brew", "style", "--fix", "--cask", CASK_NAME], check=True)
     text = target.read_text()
-    subprocess.run(["brew", "style", "--cask", str(target)], check=True)
-    subprocess.run(["brew", "audit", "--cask", "--online", "lettermint/tap/lettermint"], check=True)
-    subprocess.run(["brew", "install", "--cask", "lettermint/tap/lettermint"], check=True)
+    subprocess.run(["brew", "style", "--cask", CASK_NAME], check=True)
+    subprocess.run(["brew", "audit", "--cask", "--online", CASK_NAME], check=True)
+    subprocess.run(["brew", "install", "--cask", CASK_NAME], check=True)
     try:
         result = json.loads(release.run("lettermint", "version", "--json"))
         if result["version"] != ctx["tag"][1:]:
             raise ValueError("The Homebrew install has the wrong version.")
-        subprocess.run(["brew", "reinstall", "--cask", "lettermint/tap/lettermint"], check=True)
+        subprocess.run(["brew", "reinstall", "--cask", CASK_NAME], check=True)
     finally:
-        subprocess.run(["brew", "uninstall", "--cask", "lettermint/tap/lettermint"], check=True)
+        subprocess.run(["brew", "uninstall", "--cask", CASK_NAME], check=True)
 
     # Use only tap API calls with the tap token. Do not store it in a Git remote.
     branch = "release/" + ctx["tag"]
