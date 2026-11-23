@@ -98,7 +98,7 @@ func (p *Presenter) Result(command string, value any, scope Context) error {
 		}
 		p.fields(&b, data, "", command == "listeners secret")
 		switch command {
-		case "messages send":
+		case "messages send", "messages resend":
 			b.WriteString("\nAccepted for processing. Delivery is not yet confirmed.\n")
 			if m, ok := data.(map[string]any); ok {
 				fmt.Fprintf(&b, "Check delivery with: lettermint messages events %s", scalar(m["message_id"]))
@@ -120,6 +120,8 @@ func resultTitle(command string) string {
 	switch command {
 	case "messages send":
 		return "Message accepted"
+	case "messages resend":
+		return "Resend accepted"
 	case "auth login":
 		return "Login complete"
 	case "auth status":

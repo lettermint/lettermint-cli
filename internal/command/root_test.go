@@ -24,7 +24,7 @@ func TestSendRejectsMixedInputBeforeAuthentication(t *testing.T) {
 	}
 }
 func TestEveryPlannedCommandHasHelp(t *testing.T) {
-	for group, actions := range map[string][]string{"auth": {"login", "status", "logout"}, "profiles": {"list", "use"}, "context": {"show", "set"}, "messages": {"send", "list", "get", "events", "content"}, "projects": {"list", "get", "create"}, "routes": {"list", "get", "create", "update", "verify-inbound-domain"}, "domains": {"list", "get", "create", "verify", "assign"}, "webhooks": {"list", "get", "create", "update", "delete", "test", "listen"}, "listeners": {"list", "get", "stop", "replay", "secret"}, "skills": {"list", "export"}} {
+	for group, actions := range map[string][]string{"auth": {"login", "status", "logout"}, "profiles": {"list", "use"}, "context": {"show", "set"}, "messages": {"send", "list", "get", "events", "content", "resend"}, "projects": {"list", "get", "create"}, "routes": {"list", "get", "create", "update", "verify-inbound-domain"}, "domains": {"list", "get", "create", "verify", "assign"}, "webhooks": {"list", "get", "create", "update", "delete", "test", "listen"}, "listeners": {"list", "get", "stop", "replay", "secret"}, "skills": {"list", "export"}} {
 		for _, action := range actions {
 			t.Run(group+"/"+action, func(t *testing.T) {
 				root := New("test", "")

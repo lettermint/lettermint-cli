@@ -46,6 +46,7 @@ func TestHumanResults(t *testing.T) {
 		{"profiles use", `{"profile":"work"}`},
 		{"doctor", `{"version":"1.0.0","api":"available","identity":{"team":{"name":"Demo"}}}`},
 		{"messages send", `{"data":{"message_id":"msg_01","status":"accepted","idempotent_replay":false}}`},
+		{"messages resend", `{"message_id":"msg_02","status":"pending"}`},
 		{"projects create", `{"data":{"id":"proj_01","name":"Orders"}}`},
 		{"routes update", `{"data":{"id":"route_01","name":"Receipts"}}`},
 		{"domains verify", `{"data":{"verified":false,"status":"pending"}}`},

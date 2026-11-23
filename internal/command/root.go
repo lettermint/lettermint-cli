@@ -84,7 +84,7 @@ func (a *app) client(c *cobra.Command) (*api.Client, config.Profile, string, err
 		p.Route = a.route
 	}
 	switch c.CommandPath() {
-	case "lettermint messages get", "lettermint messages events", "lettermint messages content":
+	case "lettermint messages get", "lettermint messages events", "lettermint messages content", "lettermint messages resend":
 		if !c.Flags().Changed("project") && !c.InheritedFlags().Changed("project") {
 			p.Project = ""
 		}
@@ -176,6 +176,7 @@ func (a *app) resourceCommands(root *cobra.Command) {
 		if group == "messages" {
 			a.sendCommand(parent)
 			a.contentCommand(parent)
+			a.resendCommand(parent)
 		}
 		if group == "webhooks" {
 			a.listenCommand(parent)
