@@ -247,6 +247,8 @@ func grouped(f float64) string {
 }
 
 // bucketLabel keeps the bucket in the query time zone, as the API returns it.
+// Hourly labels include the UTC offset, so the repeated hour at a daylight
+// saving change shows as two different buckets.
 func bucketLabel(value, interval any) string {
 	raw, _ := value.(string)
 	at, err := time.Parse(time.RFC3339, raw)
@@ -254,7 +256,7 @@ func bucketLabel(value, interval any) string {
 		return scalar(value)
 	}
 	if interval == "hour" {
-		return at.Format("2006-01-02 15:04")
+		return at.Format("2006-01-02 15:04 -07:00")
 	}
 	return at.Format("2006-01-02")
 }
