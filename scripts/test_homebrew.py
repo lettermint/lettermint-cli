@@ -90,11 +90,14 @@ class HomebrewTest(unittest.TestCase):
         self.assertEqual(request.args[2]["head"], "release/v1.2.3")
         self.assertIn("merge automatically", request.args[2]["body"])
 
-    def test_brew_checks_load_the_cask_by_name(self):
+    def test_brew_checks_trust_and_load_the_cask_by_name(self):
         homebrew.main()
         brew = [call.args[0] for call in self.brew.call_args_list if call.args[0][0] == "brew"]
         self.assertIn(["brew", "style", "--fix", "--cask", homebrew.CASK_NAME], brew)
         self.assertIn(["brew", "style", "--cask", homebrew.CASK_NAME], brew)
+        trust = brew.index(["brew", "trust", "--cask", homebrew.CASK_NAME])
+        self.assertLess(brew.index(["brew", "update", "--quiet"]), brew.index(["brew", "tap", "lettermint/tap"]))
+        self.assertLess(trust, brew.index(["brew", "style", "--fix", "--cask", homebrew.CASK_NAME]))
         for command in brew:
             self.assertFalse(any(str(arg).endswith(".rb") for arg in command), command)
 

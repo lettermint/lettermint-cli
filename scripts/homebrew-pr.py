@@ -82,11 +82,16 @@ def main():
         if cask_version(current_text) >= candidate:
             print("The tap already has this version or a newer version. No update is required.")
             return
+    # Check with current Homebrew: runner images can carry an older version.
+    subprocess.run(["brew", "update", "--quiet"], check=True)
     subprocess.run(["brew", "tap", "lettermint/tap"], check=True)
     tap_path = Path(release.run("brew", "--repository", "lettermint/tap"))
     target = tap_path / CASK
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text)
+    # Homebrew loads casks from third-party taps only after they are trusted.
+    # install trusts a fully qualified name itself; style and audit do not.
+    subprocess.run(["brew", "trust", "--cask", CASK_NAME], check=True)
     subprocess.run(["brew", "style", "--fix", "--cask", CASK_NAME], check=True)
     text = target.read_text()
     subprocess.run(["brew", "style", "--cask", CASK_NAME], check=True)
