@@ -50,6 +50,7 @@ func newWithStore(version, clientID string, store *config.Store) *cobra.Command 
 	a.authCommands(root)
 	a.profileCommands(root)
 	a.resourceCommands(root)
+	a.analyticsCommand(root)
 	a.utilityCommands(root)
 	a.configurePresentation(root)
 	return root

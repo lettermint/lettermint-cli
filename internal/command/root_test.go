@@ -24,11 +24,15 @@ func TestSendRejectsMixedInputBeforeAuthentication(t *testing.T) {
 	}
 }
 func TestEveryPlannedCommandHasHelp(t *testing.T) {
-	for group, actions := range map[string][]string{"auth": {"login", "status", "logout"}, "profiles": {"list", "use"}, "context": {"show", "set"}, "messages": {"send", "list", "get", "events", "content", "resend"}, "projects": {"list", "get", "create"}, "routes": {"list", "get", "create", "update", "verify-inbound-domain"}, "domains": {"list", "get", "create", "verify", "assign"}, "webhooks": {"list", "get", "create", "update", "delete", "test", "listen", "regenerate-secret", "deliveries", "delivery", "retry"}, "listeners": {"list", "get", "stop", "replay", "secret"}, "skills": {"list", "export"}} {
+	for group, actions := range map[string][]string{"auth": {"login", "status", "logout"}, "profiles": {"list", "use"}, "context": {"show", "set"}, "messages": {"send", "list", "get", "events", "content", "resend"}, "projects": {"list", "get", "create"}, "routes": {"list", "get", "create", "update", "verify-inbound-domain"}, "domains": {"list", "get", "create", "verify", "assign"}, "webhooks": {"list", "get", "create", "update", "delete", "test", "listen", "regenerate-secret", "deliveries", "delivery", "retry"}, "listeners": {"list", "get", "stop", "replay", "secret"}, "skills": {"list", "export"}, "analytics": {""}} {
 		for _, action := range actions {
 			t.Run(group+"/"+action, func(t *testing.T) {
 				root := New("test", "")
-				root.SetArgs([]string{group, action, "--help"})
+				args := []string{group}
+				if action != "" {
+					args = append(args, action)
+				}
+				root.SetArgs(append(args, "--help"))
 				var out bytes.Buffer
 				root.SetOut(&out)
 				if err := root.Execute(); err != nil {
